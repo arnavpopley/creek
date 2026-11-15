@@ -1,0 +1,13 @@
+# Creek's own ledger: never commit a real session.
+.creek/
+
+# Unscrubbed fixtures stay on this machine.
+tests/fixtures/local/
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
