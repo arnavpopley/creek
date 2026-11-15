@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 import re
 
-from .. import actions, ledger
+from .. import actions, guard, ledger
 from . import env_branch, locate
 
 EDIT_TOOLS = ("Edit", "Write", "MultiEdit", "NotebookEdit")
@@ -22,21 +22,19 @@ def run(payload: dict) -> None:
     tool = payload.get("tool_name") or ""
     ti = payload.get("tool_input") or {}
     cdir, session = locate(payload)
-    if tool in EDIT_TOOLS:
-        path = ti.get("file_path") or ti.get("notebook_path")
-        if not path:
-            return None
-        with ledger.transaction(cdir, session) as tx:
-            node, branch = _focus(tx)
-            tx.emit({"type": "edit", "file": _relative(path, cdir), "tool": tool, "node": node, "branch": branch})
+    files, _ = guard.targets(tool, ti)
+    events = pr_events(str(ti.get("command") or ""), _output(payload.get("tool_response"))) if tool == "Bash" else []
+    if not files and not events:
         return None
-    if tool == "Bash":
-        events = pr_events(str(ti.get("command") or ""), _output(payload.get("tool_response")))
-        if events:
-            with ledger.transaction(cdir, session) as tx:
-                node, branch = _focus(tx)
-                for ev in events:
-                    tx.emit({**ev, "node": node, "branch": branch})
+    root = os.path.realpath(cdir.parent)
+    cwd = payload.get("cwd") or root
+    with ledger.transaction(cdir, session) as tx:
+        node, branch = _focus(tx)
+        for path in files:
+            full = path if os.path.isabs(path) else os.path.join(cwd, path)
+            tx.emit({"type": "edit", "file": _relative(full, cdir), "tool": tool, "node": node, "branch": branch})
+        for ev in events:
+            tx.emit({**ev, "node": node, "branch": branch})
     return None
 
 

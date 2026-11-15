@@ -61,13 +61,15 @@ def parse_markers(text: str | None) -> tuple[list[dict], list[str]]:
 
 
 def _parse_on(rest: str) -> dict:
+    # Anything after a "|" is commentary, not part of the node.
+    rest = rest.split("|")[0].strip()
     if not rest:
         raise ValueError("creek: on needs a node")
     return {"kind": "on", "node": rest[:200]}
 
 
 def _parse_node(rest: str) -> dict:
-    title = rest.strip(" -:")
+    title = rest.split("|")[0].strip(" -:")
     if not title:
         raise ValueError("creek: node needs a title")
     return {"kind": "node", "title": title[:200]}

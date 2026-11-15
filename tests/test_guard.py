@@ -212,3 +212,59 @@ class LatencyTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class BashAndPluginEditTest(HookCase):
+    def seed(self):
+        self.hook("stop", last_assistant_message=(
+            "creek: node Keys\ncreek: on 1\n"
+            "creek: resolve 1 | decision: ignore repeats | rule: claim keys first | affects: src/components/ContactList.tsx"
+        ))
+
+    def test_bash_targets(self):
+        self.assertEqual(guard.bash_targets("cat app.js"), [])
+        self.assertEqual(guard.bash_targets("npm test 2>&1"), [])
+        self.assertEqual(guard.bash_targets("ls > /dev/null"), [])
+        self.assertEqual(guard.bash_targets('sed -i "" "s/a/b/" app.js style.css'), ["app.js", "style.css"])
+        self.assertEqual(guard.bash_targets("cat > src/app.js <<'EOF'\nimport x from './y.css'\nEOF"), ["src/app.js"])
+        self.assertEqual(guard.bash_targets("python3 -c \"open('notes.md','w').write('x')\""), ["notes.md"])
+        self.assertEqual(guard.bash_targets("echo x | tee -a log.txt"), ["log.txt"])
+
+    def test_bash_write_is_guarded_and_logged(self):
+        self.seed()
+        cmd = "cat > src/components/ContactList.tsx <<'EOF'\nexport function ContactList() {}\nEOF"
+        out = self.hook("pre-tool-use", tool_name="Bash", tool_input={"command": cmd})
+        self.assertIn("r1 (n1): ignore repeats. Rule: claim keys first", self.context(out))
+        self.hook("post-tool-use", tool_name="Bash", tool_input={"command": cmd}, tool_response={"stdout": "", "stderr": ""})
+        self.assertEqual(self.state()["nodes"]["n1"]["edits"], {"src/components/ContactList.tsx": 1})
+
+    def test_bash_read_is_not_guarded(self):
+        self.seed()
+        self.assertIsNone(self.hook("pre-tool-use", tool_name="Bash", tool_input={"command": "cat src/components/ContactList.tsx"}))
+
+    def test_plugin_edit_tool_is_guarded(self):
+        self.seed()
+        ti = {"file_path": str(self.tmp / "src/components/ContactList.tsx"), "old_string": "a", "new_string": "b"}
+        out = self.hook("pre-tool-use", tool_name="mcp__plugin_woz_code__Edit", tool_input=ti)
+        self.assertIn("r1 (n1)", self.context(out))
+        self.assertIsNone(self.hook("pre-tool-use", tool_name="mcp__plugin_woz_code__Search", tool_input={"query": "ContactList.tsx"}))
+
+
+class NodeMatchingTest(HookCase):
+    def test_paraphrased_title_lands_on_the_existing_node(self):
+        self.hook("user-prompt-submit", prompt="1. Make the header sticky\n2. Add keyboard shortcuts: w opens /work, t opens /talk\n3. Pick a link colour")
+        self.hook("stop", last_assistant_message="creek: resolve 2 | decision: w and t shortcuts | affects: app.js")
+        # The demo's exact markers: a "new" node that is really n2, with commentary after a pipe.
+        self.hook("stop", last_assistant_message="creek: node h shortcut | h→/ added to the keydown handler\ncreek: resolve h shortcut | decision: h goes to / | affects: app.js")
+        st = self.state()
+        self.assertEqual(len(st["nodes"]), 3)
+        self.assertEqual(st["records"]["r2"]["node"], "n2")
+        self.assertEqual(st["conflicts"], {})  # same node: a refinement
+        self.assertEqual(st["nodes"]["n2"]["status"], "resolved")
+
+    def test_unrelated_title_still_makes_a_node(self):
+        self.hook("user-prompt-submit", prompt="1. Header\n2. Keyboard shortcuts\n3. Footer links")
+        self.hook("stop", last_assistant_message="creek: node Contact form validation | new\ncreek: resolve Contact form validation | decision: validate email")
+        st = self.state()
+        self.assertEqual(st["nodes"]["n4"]["title"], "Contact form validation")
+        self.assertEqual(st["records"]["r1"]["node"], "n4")
