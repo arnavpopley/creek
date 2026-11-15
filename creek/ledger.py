@@ -165,6 +165,20 @@ def read_cached_state(cdir: Path) -> dict | None:
     return _read_state_file(cdir)
 
 
+def fresh_state(cdir: Path) -> dict | None:
+    """Current state without taking the lock when state.json is already up to date.
+
+    None when there is no ledger yet.
+    """
+    size = _log_size(cdir)
+    if size == 0:
+        return None
+    st = _read_state_file(cdir)
+    if st is not None and st.get("offset") == size:
+        return st
+    return load_state(cdir)
+
+
 class Tx:
     """A locked view of the state. `emit` appends an event and applies it."""
 
@@ -484,7 +498,6 @@ def _conflict_flag(state, ev, s):
     recs = list(ev["records"])
     state["conflicts"][cid] = new(model.Conflict(records=recs, overlap=list(ev.get("overlap") or [])))
     state["conflicts"][cid]["ts"] = ev.get("ts")
-    _uninject(state, recs)
     newer, older = sorted(recs, key=model.id_num, reverse=True)[:2]
     rec_new = state["records"].get(newer, {})
     files = ", ".join(display_file(rec_new, f) for f in ev.get("overlap") or []) or "the same files"
@@ -498,7 +511,6 @@ def _conflict_clear(state, ev, s):
     if res == "superseded":
         older, newer = sorted(c["records"], key=model.id_num)[:2]
         _deactivate(state, older, newer)
-    _uninject(state, c["records"])
 
 
 def _edit(state, ev, s):
@@ -518,9 +530,10 @@ def _edit(state, ev, s):
 def _pr(state, ev, s):
     num = str(int(ev["number"]))
     pr = state["prs"].setdefault(num, {"action": None, "node": None, "branch": None, "score": None, "history": []})
-    pr["action"] = ev.get("action") or pr["action"]
-    pr["node"] = ev.get("node") or pr["node"]
-    pr["branch"] = ev.get("branch") or pr["branch"]
+    pr["action"] = ev.get("action") or pr["action"] or "opened"
+    # A PR belongs to the node it was opened on, even if focus has moved since.
+    pr["node"] = pr["node"] or ev.get("node")
+    pr["branch"] = pr["branch"] or ev.get("branch")
     if ev.get("score") is not None:
         pr["score"] = ev.get("score")
         pr["reviewer"] = ev.get("reviewer")

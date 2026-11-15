@@ -1,0 +1,58 @@
+{
+  "about": "Written for Creek's tests, not part of the reconstruction. 'markers' is what the model could have written in its resolve/ask markers under the Creek protocol, using only what was known when each branch settled (the reconstruction has resolutions but no rules or tags). 'probes' are representative edits at each lost detail's later_msg: 'first touch' is the edit made before anyone knew the detail mattered, 'fix' is the edit that repaired it. Probes are guesses at what those edits contained; the real diffs are not in the fixture.",
+  "markers": {
+    "b1": {"rule": "the nav must fit at 1024 and 1280 px; recheck header width across every view when adding nav links", "tags": ["nav", "header width"]},
+    "b2": {"rule": "the help panel is a modal <dialog> in the browser's top layer; anything drawn over the page (overlays, a custom pointer) must check for an open dialog", "tags": ["dialog", "overlay", "pointer", "top layer"]},
+    "b3": {"rule": "the typing plays once per tab: sessionStorage 'hero-typed' is set only when typing completes; clear it to replay", "tags": ["sessionStorage", "hero-typed", "StrictMode"]},
+    "b4": {"rule": "about lines carry no full stops; the meta description joins them with '. '", "tags": ["profile.about", "meta description"]},
+    "b5": {"rule": "contact keys return early on key repeat or an open dialog, before the key is marked handled", "tags": ["keydown", "repeat", "dialog"]},
+    "b6": {"rule": "contact links handle keys first and preventDefault matched ones; the header skips keys with e.defaultPrevented", "tags": ["defaultPrevented", "keydown", "shortcut"]},
+    "b7": {"rule": "claim a matched contact key first, then skip the action if it is a repeat or help is open", "tags": ["keydown", "repeat", "defaultPrevented"], "supersedes": ["b5"]},
+    "b8": {"rule": "the help panel groups keys under # anywhere / # on projects / # on contact, one per line; new shortcuts go in the right group", "tags": ["shortcut", "help panel"]},
+    "b9": {"rule": "useDigitFlash is shared by the ticker and the stats bars", "tags": ["useDigitFlash", "ticker", "flash"]},
+    "b10": {"rule": "round SVG coordinates computed from time or trig to 3 decimals so server and browser output match", "tags": ["hydration", "toFixed"]},
+    "b11": {"tags": ["hydration", "error 418"]},
+    "b12": {"rule": "set bylineLang on a byline that is not in English", "tags": ["bylineLang", "byline"]},
+    "b13": {"ask": "Which key should 'more' use? m is taken by 'me'; it is o for now", "asked_at": [10, 11, 12, 13, 14, 15]},
+    "b14": {"rule": "only the four flavour names redirect; /projects/* also serves images", "tags": ["redirect", "flavour"]},
+    "b15": {"tags": ["statsIntro"]},
+    "b16": {"ask": "For the landing bullets, did you want // or # (the bash comment marker)? I used #"},
+    "b17": {"tags": ["crosshair", "cursor", "candle"]},
+    "b18": {"rule": "the crosshair re-reads its target on scroll and caches its text; corner tags stay clamped inside the viewport", "tags": ["crosshair", "cursor", "data-series"]},
+    "b19": {"rule": "the custom pointer is shelved (PR #42 is a draft); don't rebuild it without asking", "tags": ["crosshair", "cursor", "pointer"], "table": "too big; it hid the real information"},
+    "b20": {"ask": "Which entry counts as the year 1 design project, and is there a link for the paper?"},
+    "b21": {"rule": "only entries with a website get the big card; entries without one need the 'when' field", "tags": ["when", "QuoteBoard"]}
+  },
+  "probes": {
+    "b2": {
+      "kind": "edit",
+      "variants": [
+        {"label": "first touch", "file": "src/components/Crosshair.tsx", "content": "// Custom pointer: hide the system cursor and draw a crosshair overlay that follows the mouse.\nexport function Crosshair() {\n  useEffect(() => {\n    document.documentElement.style.cursor = 'none';\n    const move = (e: PointerEvent) => setPos({ x: e.clientX, y: e.clientY });\n    window.addEventListener('pointermove', move);\n    return () => window.removeEventListener('pointermove', move);\n  }, []);\n}"},
+        {"label": "fix", "file": "src/components/Crosshair.tsx", "content": "const modalOpen = document.querySelector('dialog[open]') !== null;\nif (modalOpen) { document.documentElement.style.cursor = ''; return null; }"}
+      ]
+    },
+    "b5": {
+      "kind": "edit",
+      "variants": [
+        {"label": "first touch", "file": "src/components/ContactList.tsx", "content": "const LETTER_KEYS: Record<string, string> = { e: 'email', l: 'linkedin', g: 'github', i: 'instagram', y: 'youtube' };\nfunction onKeyDown(event: KeyboardEvent) {\n  const id = LETTER_KEYS[event.key];\n  if (!id) return;\n  open(id);\n}"}
+      ]
+    },
+    "b6": {
+      "kind": "edit",
+      "variants": [
+        {"label": "first touch", "file": "src/components/Header.tsx", "content": "const VIEW_KEYS = { m: 'me', s: 'stats', b: 'builds', w: 'work', o: 'more', t: 'talk' };\nfunction onKey(event: KeyboardEvent) {\n  const view = VIEW_KEYS[event.key];\n  if (view) router.push('/' + view);\n}"}
+      ]
+    },
+    "b3": {
+      "kind": "edit",
+      "variants": [
+        {"label": "first touch", "file": "src/app/demo/page.tsx", "content": "import Hero from '@/components/Hero';\nexport default function Demo() {\n  return <section><h2>landing typing</h2><Hero /></section>;\n}"},
+        {"label": "fix", "file": "src/app/demo/page.tsx", "content": "<button onClick={() => { sessionStorage.removeItem('hero-typed'); location.reload(); }}>[replay typing]</button>"}
+      ]
+    },
+    "b9": {"kind": "none", "reason": "Needed while answering a question about why the ticker looked static, not during an edit; no edit to hook. Shown by ::pull or the map."},
+    "b11": {"kind": "none", "reason": "A reminder for the model to recheck production after a merge. No edit touches it and no file matches; it would need an open node or a question to resurface."},
+    "b13": {"kind": "question"},
+    "b20": {"kind": "question"}
+  }
+}
