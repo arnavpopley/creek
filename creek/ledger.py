@@ -178,8 +178,13 @@ class Tx:
         ev = dict(event)
         ev.setdefault("session", self.session)
         key = _ALLOC.get(ev.get("type"))
-        if key and not ev.get(key) and _allocates(self.state, ev):
-            ev[key] = _peek_id(self.state, key)
+        if key and not ev.get(key):
+            if ev["type"] == "question.ask":
+                # A repeat names the question it folds into; the fold matches first anyway.
+                norm = ev.get("norm") or terms.normalize_question(ev.get("text", ""))
+                ev[key] = _matching_question(self.state, norm) or _peek_id(self.state, key)
+            else:
+                ev[key] = _peek_id(self.state, key)
         ev = append_event(self.cdir, ev)
         apply(self.state, ev)
         # Keep the offset in step so the save below doesn't refold this event.
@@ -220,12 +225,6 @@ _COLLECTION = {"node": "nodes", "branch": "branches", "record": "records", "ques
 def _peek_id(state: dict, kind: str) -> str:
     p = PREFIX[kind]
     return f"{p}{state['next'][p]}"
-
-
-def _allocates(state: dict, ev: dict) -> bool:
-    if ev.get("type") == "question.ask":
-        return _matching_question(state, ev.get("norm") or terms.normalize_question(ev.get("text", ""))) is None
-    return True
 
 
 def _take_id(state: dict, kind: str, wanted: str | None) -> str:
