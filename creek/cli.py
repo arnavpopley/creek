@@ -114,6 +114,12 @@ def cmd_fork(args) -> int:
     return fork.run(args.node, session=args.session, print_only=args.print)
 
 
+def cmd_map(args) -> int:
+    from . import mapview
+
+    return mapview.run(open_after=args.open)
+
+
 def cmd_install(args) -> int:
     from . import install
 
@@ -146,6 +152,10 @@ def _main(argv: list[str]) -> int:
     f.add_argument("--session", help="session to fork (default: the most recently active one)")
     f.add_argument("--print", action="store_true", help="print the command instead of starting claude")
     f.set_defaults(fn=cmd_fork)
+
+    m = sub.add_parser("map", help="write .creek/map.html")
+    m.add_argument("--open", action="store_true", help="open it in the browser")
+    m.set_defaults(fn=cmd_map)
 
     i = sub.add_parser("install", help="set up the status line and check the plugin is enabled")
     i.add_argument("--dry-run", action="store_true", help="show the settings change without writing it")
