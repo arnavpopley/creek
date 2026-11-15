@@ -19,6 +19,7 @@ def run(payload: dict) -> dict | None:
     parts: list[str] = []
     with ledger.transaction(cdir, session) as tx:
         st = tx.state
+        tx.emit({"type": "turn", "preview": _preview(prompt)})
         if titles:
             created = []
             brief_id = f"p{st['turn'].get(session, 0) + 1}-{st['seq']}"
@@ -40,7 +41,6 @@ def run(payload: dict) -> dict | None:
         if pulls:
             parts.append("Creek: records you asked for (::pull) —\n" + "\n\n".join(pulls))
             tx.emit({"type": "pulls.clear", "count": len(pulls)})
-        tx.emit({"type": "turn"})
         if parts:
             text = "\n\n".join(parts)
             tx.emit({"type": "inject", "hook": "user-prompt-submit", "records": [], "chars": len(text)})
@@ -59,6 +59,14 @@ def _map(cdir, session: str) -> dict:
     # This one needs Claude: only its reply can carry the line that shows the view.
     text = f"The user typed ::map. Creek has written its view. Reply with exactly this line and nothing else (no creek: markers):\n{line}"
     with ledger.transaction(cdir, session) as tx:
-        tx.emit({"type": "turn"})
+        tx.emit({"type": "turn", "preview": "::map"})
         tx.emit({"type": "inject", "hook": "user-prompt-submit", "records": [], "chars": len(text)})
     return context_output("UserPromptSubmit", text)
+
+
+def _preview(prompt: str) -> str:
+    """First non-empty line of a prompt, for the graph. Stays in the local ledger."""
+    for line in prompt.splitlines():
+        if line.strip():
+            return line.strip()[:80]
+    return ""

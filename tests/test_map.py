@@ -51,7 +51,7 @@ class MapStaticTest(ProjectCase):
         self.assertNotIn("</", m.group(1))
 
     def test_panes(self):
-        for pane in ('id="needs-pane"', 'id="points-pane"', 'id="decisions-pane"'):
+        for pane in ('id="needs-pane"', 'id="graph-pane"', 'id="points-pane"', 'id="decisions-pane"'):
             self.assertIn(pane, self.html)
 
     def test_uses_orca_tokens_with_fallbacks(self):

@@ -16,7 +16,7 @@ from . import ledger, paths
 _DROP = ("index", "injected", "pending_notes", "pending_pulls", "offset", "next", "cost")
 
 
-def payload(state: dict, project: str) -> dict:
+def payload(state: dict, project: str, events: list[dict] | None = None) -> dict:
     view = {k: v for k, v in state.items() if k not in _DROP}
     view["records"] = {}
     for rid, r in state.get("records", {}).items():
@@ -29,16 +29,22 @@ def payload(state: dict, project: str) -> dict:
         newer = state["records"].get(max(c["records"], key=lambda x: int(x[1:])), {})
         c["display_overlap"] = [ledger.display_file(newer, f) for f in c.get("overlap", [])]
         view["conflicts"][cid] = c
+    from . import graph
+
     return {
         "project": project,
         "generated": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "state": view,
+        "graph": graph.build(events or []),
     }
 
 
-def render(state: dict, project: str) -> str:
+def render(state: dict, project: str, events: list[dict] | None = None, story: list[dict] | None = None) -> str:
     template = resources.files("creek").joinpath("templates/map.html").read_text()
-    data = json.dumps(payload(state, project), ensure_ascii=False, separators=(",", ":"))
+    body = payload(state, project, events)
+    if story:
+        body["story"] = story
+    data = json.dumps(body, ensure_ascii=False, separators=(",", ":"))
     # Keep the JSON inert inside <script>: no closing tags or comment openers.
     data = data.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
     title = project.replace("&", "&amp;").replace("<", "&lt;")
@@ -49,7 +55,7 @@ def write(cdir: Path | None = None, state: dict | None = None) -> Path:
     cdir = cdir or paths.creek_dir()
     state = state if state is not None else ledger.load_state(cdir)
     out = cdir / "map.html"
-    out.write_text(render(state, cdir.parent.name), encoding="utf-8")
+    out.write_text(render(state, cdir.parent.name, ledger.read_events(cdir)[0]), encoding="utf-8")
     return out
 
 
@@ -72,7 +78,7 @@ def write_orca(cdir: Path | None = None, state: dict | None = None) -> str | Non
     cdir = cdir or paths.creek_dir()
     state = state if state is not None else ledger.load_state(cdir)
     project = cdir.parent.name
-    html = render(state, project)
+    html = render(state, project, ledger.read_events(cdir)[0])
     if len(html.encode()) > ORCA_LIMIT:
         return None
     slug = "".join(c if c.isalnum() else "-" for c in project.lower()).strip("-")[:30] or "project"

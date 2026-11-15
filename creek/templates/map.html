@@ -8,10 +8,10 @@
   /* Orca's theme tokens when shown inside Orca, with fallbacks for a plain browser.
      Local colours use their own names so Orca's live theme is never overridden. */
   :root {
-    --ck-ok: #16a34a; --ck-open: #2563eb; --ck-wait: #d97706; --ck-bad: #dc2626; --ck-off: #8a8a8a;
+    --ck-ok: #16a34a; --ck-open: #2563eb; --ck-wait: #d97706; --ck-bad: #dc2626; --ck-off: #8a8a8a; --ck-creek: #0d9488;
   }
   @media (prefers-color-scheme: dark) {
-    :root { --ck-ok: #4ade80; --ck-open: #60a5fa; --ck-wait: #fbbf24; --ck-bad: #f87171; --ck-off: #8a8a8a; }
+    :root { --ck-ok: #4ade80; --ck-open: #60a5fa; --ck-wait: #fbbf24; --ck-bad: #f87171; --ck-off: #8a8a8a; --ck-creek: #2dd4bf; }
   }
   * { box-sizing: border-box; }
   body {
@@ -97,6 +97,35 @@
   .meta { font-size: 12px; color: var(--muted-foreground, #6b6b6b); margin-top: 3px; }
   .detail .more { font-size: 12.5px; color: var(--muted-foreground, #6b6b6b); margin-top: 4px; }
 
+
+  /* Graph */
+  .gwrap { border: 1px solid var(--border, #e5e5e5); border-radius: var(--radius, 10px); background: var(--card, #fafafa);
+           color: var(--card-foreground, #171717); overflow: hidden; }
+  .gbar { display: flex; align-items: center; gap: 8px; padding: 8px 12px; border-bottom: 1px solid var(--border, #e5e5e5); flex-wrap: wrap; }
+  .gbar .cap { flex: 1; min-width: 200px; font-size: 13px; }
+  .gbar .cap b { font-weight: 600; }
+  .gbody { display: grid; grid-template-columns: 172px minmax(0, 1fr); }
+  .glabels { border-right: 1px solid var(--border, #e5e5e5); }
+  .glabel { height: var(--g-row, 40px); display: flex; align-items: center; gap: 7px; padding: 0 10px; font-size: 12.5px; overflow: hidden; }
+  .glabel span.t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .glabel .sw { width: 10px; height: 10px; border-radius: 3px; flex: none; }
+  .glabel.main { font-weight: 600; }
+  .gscroll { overflow-x: auto; overflow-y: hidden; }
+  .gscroll svg { display: block; }
+  .g-el { transition: opacity .35s ease-out; }
+  .g-hide { opacity: 0; }
+  .g-dot { cursor: pointer; }
+  .g-dot:hover { filter: brightness(1.15); }
+  .g-now { opacity: .35; }
+  .glegend { display: flex; flex-wrap: wrap; gap: 4px 14px; padding: 8px 12px; border-top: 1px solid var(--border, #e5e5e5);
+             font-size: 12px; color: var(--muted-foreground, #6b6b6b); }
+  .glegend i { font-style: normal; display: inline-block; width: 18px; text-align: center; }
+  .gdetail { padding: 10px 12px; border-top: 1px solid var(--border, #e5e5e5); font-size: 13px; min-height: 42px; }
+  .gdetail .k { font-size: 11.5px; color: var(--muted-foreground, #6b6b6b); text-transform: uppercase; letter-spacing: .04em; }
+
+  /* A story (demo) is just the graph playing. */
+  body.story .stats, body.story #needs-pane, body.story .tabs, body.story footer { display: none; }
+
   /* Decisions */
   .search { width: 100%; padding: 8px 11px; margin-bottom: 10px; border-radius: 8px; font: inherit;
             border: 1px solid var(--input, #e5e5e5); background: var(--background, #fff); color: var(--foreground, #171717); }
@@ -117,15 +146,30 @@
   <div class="stats" id="stats"></div>
   <section class="needs" id="needs-pane" aria-label="Needs you"></section>
   <div class="tabs" role="tablist">
-    <button class="tab" role="tab" id="tab-points" aria-selected="true">Points<span class="n" id="n-points"></span></button>
+    <button class="tab" role="tab" id="tab-graph" aria-selected="true">Graph</button>
+    <button class="tab" role="tab" id="tab-points" aria-selected="false">Points<span class="n" id="n-points"></span></button>
     <button class="tab" role="tab" id="tab-decisions" aria-selected="false">Decisions<span class="n" id="n-decisions"></span></button>
-    <div class="filters" id="filters">
+    <div class="filters hidden" id="filters">
       <button class="chip-btn" data-f="all" aria-pressed="true">All</button>
       <button class="chip-btn" data-f="open" aria-pressed="false">Open</button>
       <button class="chip-btn" data-f="resolved" aria-pressed="false">Done</button>
     </div>
   </div>
-  <section id="points-pane" aria-label="Points"></section>
+  <section id="graph-pane" aria-label="Graph">
+    <div class="gwrap">
+      <div class="gbar"><div class="cap" id="gcap"></div>
+        <button class="btn-s cmd" id="gplay" type="button">Play</button></div>
+      <div class="gbody"><div class="glabels" id="glabels"></div><div class="gscroll" id="gscroll"></div></div>
+      <div class="gdetail" id="gdetail"><span class="muted">Click a dot for details.</span></div>
+      <div class="glegend">
+        <span><i>●</i>your prompt</span><span><i style="color:var(--ck-open)">●</i>decision on a point</span>
+        <span><i style="color:var(--ck-wait)">◯</i>waiting on you</span><span><i>◉</i>your answer</span>
+        <span><i>⤴</i>merged: point settled</span><span><i style="color:var(--ck-creek)">┈</i>Creek reminded Claude</span>
+        <span><i style="color:var(--ck-bad)">╌</i>conflict</span>
+      </div>
+    </div>
+  </section>
+  <section id="points-pane" class="hidden" aria-label="Points"></section>
   <section id="decisions-pane" class="hidden" aria-label="Decisions">
     <input class="search" id="search" type="search" placeholder="Search by file, word or id, e.g. app.js or shortcut" autocomplete="off" spellcheck="false">
     <div id="decisions"></div>
@@ -349,20 +393,184 @@
   }
   search.addEventListener("input", filterDecisions);
 
+
+  // Graph ---------------------------------------------------------------------------
+  // Main is your prompts; each point forks off, gains decisions, and merges back when settled.
+  (function () {
+    var G = DATA.graph || { cols: 0, rows: [], segments: [], dots: [], arcs: [] };
+    var STORY = DATA.story || null;
+    if (STORY) document.body.classList.add("story");
+    var ROW = 40, PADL = 18;
+    // Fit the columns to the space available; scroll sideways only for long sessions.
+    var avail = (document.getElementById("gscroll").clientWidth || 600) - PADL - 30;
+    var COLW = Math.max(26, Math.min(56, Math.floor(avail / Math.max(1, G.cols + 1))));
+    var root = document.documentElement;
+    function cssv(name, fb) { return getComputedStyle(root).getPropertyValue(name).trim() || fb; }
+    var PALETTE = ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"];
+    var FALLBACK = ["#2563eb", "#16a34a", "#d97706", "#9333ea", "#db2777"];
+    function laneColor(row) { if (!row) return cssv("--foreground", "#171717"); var i = (row - 1) % 5; return cssv(PALETTE[i], FALLBACK[i]); }
+    function X(c) { return PADL + c * COLW; }
+    function Y(r) { return r * ROW + ROW / 2; }
+    var NS = "http://www.w3.org/2000/svg";
+    var width = X(G.cols + 1) + 20, height = G.rows.length * ROW;
+    var labels = document.getElementById("glabels");
+    labels.style.setProperty("--g-row", ROW + "px");
+    G.rows.forEach(function (r) {
+      var d = el("div", "glabel" + (r.row === 0 ? " main" : ""));
+      d.innerHTML = '<span class="sw" style="background:' + laneColor(r.row) + '"></span><span class="t" title="' + esc(r.title) + '">' +
+        (r.row ? '<span class="id">' + r.id + "</span> " : "") + esc(r.title) + "</span>";
+      labels.appendChild(d);
+    });
+    var svg = document.createElementNS(NS, "svg");
+    svg.setAttribute("width", width); svg.setAttribute("height", height); svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+    document.getElementById("gscroll").appendChild(svg);
+    var items = [];  // {node, col}
+    function add(tag, attrs, col, parent) {
+      var n = document.createElementNS(NS, tag);
+      for (var k in attrs) n.setAttribute(k, attrs[k]);
+      n.classList.add("g-el");
+      (parent || svg).appendChild(n);
+      items.push({ n: n, col: col });
+      return n;
+    }
+    function tip(n, text) { var t = document.createElementNS(NS, "title"); t.textContent = text; n.appendChild(t); }
+    var lines = document.createElementNS(NS, "g"); svg.appendChild(lines);
+    var arcsG = document.createElementNS(NS, "g"); svg.appendChild(arcsG);
+    var dotsG = document.createElementNS(NS, "g"); svg.appendChild(dotsG);
+    var fg = cssv("--foreground", "#171717"), card = cssv("--card", "#fafafa");
+
+    // Main line, one piece per column so it grows with time.
+    for (var c = 1; c <= G.cols; c++) {
+      add("line", { x1: X(c - 1), y1: Y(0), x2: X(c), y2: Y(0), stroke: fg, "stroke-width": 2.5, "stroke-linecap": "round",
+                    "stroke-dasharray": c === G.cols ? "3 4" : "" }, c, lines);
+    }
+    // Branches.
+    G.segments.forEach(function (s) {
+      var col = laneColor(s.row), y = Y(s.row), x0 = X(s.from), bend = X(s.from) + COLW * 0.75;
+      add("path", { d: "M" + x0 + " " + Y(0) + " C" + (x0 + COLW * 0.45) + " " + Y(0) + " " + (x0 + COLW * 0.3) + " " + y + " " + bend + " " + y,
+                    fill: "none", stroke: col, "stroke-width": 2.5 }, s.from, lines);
+      var end = s.open_to || s.to;
+      for (var c2 = s.from + 1; c2 <= end; c2++) {
+        var xa = Math.max(X(c2 - 1), bend);
+        if (X(c2) <= xa) continue;
+        add("line", { x1: xa, y1: y, x2: X(c2), y2: y, stroke: col, "stroke-width": 2.5,
+                      "stroke-dasharray": s.open_to && c2 > s.to ? "3 4" : "" }, c2, lines);
+      }
+      if (s.merge) {
+        var xm = X(s.merge), xt = X(s.to);
+        add("path", { d: "M" + xt + " " + y + " C" + (xm - COLW * 0.2) + " " + y + " " + (xm - COLW * 0.35) + " " + Y(0) + " " + xm + " " + Y(0),
+                      fill: "none", stroke: col, "stroke-width": 2.5 }, s.merge, lines);
+      }
+    });
+    // Arcs: reminders bow up, conflicts bow down.
+    G.arcs.forEach(function (a) {
+      var x1 = X(a.a[0]), y1 = Y(a.a[1]), x2 = X(a.b[0]), y2 = Y(a.b[1]);
+      var up = a.kind === "remind" ? -1 : 1, mx = (x1 + x2) / 2, my = (y1 + y2) / 2 + up * (14 + Math.abs(x2 - x1) * 0.12);
+      var p = add("path", { d: "M" + x1 + " " + y1 + " Q" + mx + " " + my + " " + x2 + " " + y2, fill: "none",
+                            stroke: a.kind === "remind" ? cssv("--ck-creek", "#0d9488") : cssv("--ck-bad", "#dc2626"),
+                            "stroke-width": 1.6, "stroke-dasharray": a.kind === "remind" ? "1.5 4" : "5 4", "stroke-linecap": "round" },
+                  Math.max(a.a[0], a.b[0]), arcsG);
+      tip(p, a.label);
+    });
+    // Dots.
+    G.dots.forEach(function (d) {
+      var x = X(d.col), y = Y(d.row), col = laneColor(d.row), n;
+      if (d.kind === "prompt") {
+        n = add("g", {}, d.col, dotsG);
+        var c0 = document.createElementNS(NS, "circle"); c0.setAttribute("cx", x); c0.setAttribute("cy", y); c0.setAttribute("r", 9); c0.setAttribute("fill", fg); n.appendChild(c0);
+        var t = document.createElementNS(NS, "text"); t.setAttribute("x", x); t.setAttribute("y", y + 3.5); t.setAttribute("text-anchor", "middle");
+        t.setAttribute("font-size", "10"); t.setAttribute("font-weight", "700"); t.setAttribute("fill", card); t.textContent = d.label.replace("Prompt ", "");
+        n.appendChild(t);
+      } else if (d.kind === "merge") {
+        n = add("circle", { cx: x, cy: y, r: 4, fill: fg }, d.col, dotsG);
+      } else if (d.kind === "question") {
+        n = add("g", {}, d.col, dotsG);
+        var q = document.createElementNS(NS, "circle"); q.setAttribute("cx", x); q.setAttribute("cy", y); q.setAttribute("r", 7);
+        q.setAttribute("fill", card); q.setAttribute("stroke", cssv("--ck-wait", "#d97706")); q.setAttribute("stroke-width", 2.5); n.appendChild(q);
+        var qt = document.createElementNS(NS, "text"); qt.setAttribute("x", x); qt.setAttribute("y", y + 3.5); qt.setAttribute("text-anchor", "middle");
+        qt.setAttribute("font-size", "10"); qt.setAttribute("font-weight", "700"); qt.setAttribute("fill", cssv("--ck-wait", "#d97706")); qt.textContent = "?";
+        n.appendChild(qt);
+      } else if (d.kind === "answer") {
+        n = add("g", {}, d.col, dotsG);
+        var a1 = document.createElementNS(NS, "circle"); a1.setAttribute("cx", x); a1.setAttribute("cy", y); a1.setAttribute("r", 8);
+        a1.setAttribute("fill", card); a1.setAttribute("stroke", col); a1.setAttribute("stroke-width", 2); n.appendChild(a1);
+        var a2 = document.createElementNS(NS, "circle"); a2.setAttribute("cx", x); a2.setAttribute("cy", y); a2.setAttribute("r", 4); a2.setAttribute("fill", col); n.appendChild(a2);
+      } else if (d.kind === "tabled" || d.kind === "abandoned") {
+        n = add("rect", { x: x - 6, y: y - 6, width: 12, height: 12, rx: 2, fill: d.kind === "tabled" ? cssv("--ck-wait", "#d97706") : cssv("--ck-off", "#8a8a8a") }, d.col, dotsG);
+      } else {
+        n = add("circle", { cx: x, cy: y, r: 6.5, fill: col, stroke: card, "stroke-width": 2 }, d.col, dotsG);
+      }
+      n.classList.add("g-dot");
+      n.dataset.col = d.col; n.dataset.kind = d.kind;
+      tip(n, (d.label || "") + (d.text ? ": " + d.text : ""));
+      n.addEventListener("click", function () { detail(d); });
+    });
+
+    function detail(d) {
+      var box = document.getElementById("gdetail");
+      var kinds = { prompt: "Your prompt", decision: "Decision", answer: "Your answer", question: "Question for you", merge: "Merged into main",
+                    tabled: "Parked", abandoned: "Dropped" };
+      var where = d.node && nodes[d.node] ? " · " + esc(nodes[d.node].title) : "";
+      var html = '<div class="k">' + (kinds[d.kind] || d.kind) + where + "</div>";
+      if (d.kind === "merge") html += "<div>" + esc(d.node && nodes[d.node] ? nodes[d.node].title : d.node) + " was settled and merged back.</div>";
+      else html += "<div>" + esc(d.text || d.label) + (d.kind === "question" && d.asks > 1 ? ' <span class="muted">(asked ' + d.asks + " times)</span>" : "") + "</div>";
+      if (d.rule) html += '<div class="rule"><em>Keep in mind:</em> ' + esc(d.rule) + "</div>";
+      if (d.files && d.files.length) html += '<div class="meta mono">' + esc(d.files.join(", ")) + "</div>";
+      box.innerHTML = html;
+    }
+
+    // Drawing over time ------------------------------------------------------------------
+    var shown = G.cols, timer = null;
+    var cap = document.getElementById("gcap"), play = document.getElementById("gplay"), scroller = document.getElementById("gscroll");
+    function setCol(c) {
+      shown = c;
+      items.forEach(function (it) { it.n.classList.toggle("g-hide", it.col > c); });
+      var x = X(c) - scroller.clientWidth + 120;
+      if (x > scroller.scrollLeft || X(c) < scroller.scrollLeft) scroller.scrollLeft = Math.max(0, x);
+      if (STORY) {
+        var cur = null;
+        STORY.forEach(function (s) { if (s.col <= c) cur = s; });
+        cap.innerHTML = cur ? "<b>" + esc(cur.title) + "</b> " + esc(cur.text) : "";
+      }
+    }
+    function stop() { clearTimeout(timer); timer = null; play.textContent = "Play"; }
+    function step() {
+      if (shown >= G.cols) { stop(); if (!STORY) cap.innerHTML = summary(); return; }
+      setCol(shown + 1);
+      var pause = 650;
+      if (STORY && STORY.some(function (s) { return s.col === shown; })) pause = 3600;
+      timer = setTimeout(step, pause);
+    }
+    function start() { stop(); play.textContent = "Pause"; setCol(0); timer = setTimeout(step, 500); }
+    play.addEventListener("click", function () { if (timer) stop(); else if (shown >= G.cols) start(); else { play.textContent = "Pause"; step(); } });
+    function summary() {
+      var prompts = G.dots.filter(function (d) { return d.kind === "prompt"; }).length;
+      var merges = G.dots.filter(function (d) { return d.kind === "merge"; }).length;
+      var waiting = G.dots.filter(function (d) { return d.kind === "question" && questions[d.id] && questions[d.id].status === "open"; }).length;
+      return "<b>" + prompts + " prompt" + (prompts === 1 ? "" : "s") + ", " + (G.rows.length - 1) + " points, " + merges + " merge" + (merges === 1 ? "" : "s") + ".</b> " +
+        (waiting ? waiting + " branch" + (waiting === 1 ? " is" : "es are") + " waiting on you." : "Press Play to watch it grow.");
+    }
+    if (!G.cols) { cap.textContent = "Nothing yet. Send a prompt and the graph starts here."; play.classList.add("hidden"); }
+    else if (STORY) start();
+    else { setCol(G.cols); cap.innerHTML = summary(); }
+  })();
+
   // Tabs ----------------------------------------------------------------------------
-  var tabs = { points: document.getElementById("tab-points"), decisions: document.getElementById("tab-decisions") };
+  var tabs = { graph: document.getElementById("tab-graph"), points: document.getElementById("tab-points"), decisions: document.getElementById("tab-decisions") };
   function show(which) {
-    tabs.points.setAttribute("aria-selected", String(which === "points"));
-    tabs.decisions.setAttribute("aria-selected", String(which === "decisions"));
-    document.getElementById("points-pane").classList.toggle("hidden", which !== "points");
-    document.getElementById("decisions-pane").classList.toggle("hidden", which !== "decisions");
+    Object.keys(tabs).forEach(function (k) {
+      tabs[k].setAttribute("aria-selected", String(k === which));
+      document.getElementById(k + "-pane").classList.toggle("hidden", k !== which);
+    });
     document.getElementById("filters").classList.toggle("hidden", which !== "points");
   }
+  tabs.graph.addEventListener("click", function () { show("graph"); });
   tabs.points.addEventListener("click", function () { show("points"); });
   tabs.decisions.addEventListener("click", function () { show("decisions"); search.focus(); });
 
   var h = /[#&]q=([^&]*)/.exec(location.hash);
   if (h) { search.value = decodeURIComponent(h[1]); show("decisions"); }
+  else if (/[#&]tab=points/.test(location.hash)) show("points");
   filterDecisions();
 
   var ms = performance.now() - t0;
