@@ -137,9 +137,12 @@ class _Run:
             source_msg={"turn": self.msg, "replay": b["id"]},
         )
         self.rec_of[b["id"]] = rid
-        if note.get("table"):
-            self.emit({"type": "branch.table", "branch": b["id"], "reason": note["table"]})
-            self.emit({"type": "node.status", "node": nid, "status": "tabled", "reason": note["table"]})
+        table = note.get("table")
+        if not table and b["resolution"].lower().startswith("tabled"):
+            table = b.get("trigger") or b["resolution"]
+        if table:
+            self.emit({"type": "branch.table", "branch": b["id"], "reason": table})
+            self.emit({"type": "node.status", "node": nid, "status": "tabled", "reason": table})
 
     def probe(self, d: dict) -> dict:
         bid = d["branch"]
@@ -205,7 +208,10 @@ def run(fixture: dict, cdir: Path, annotations: dict | None = None, use_markers:
             "branches": len(st["branches"]),
             "records": len(st["records"]),
             "questions": {k: {"text": q["text"], "asks": q["asks"], "status": q["status"]} for k, q in st["questions"].items()},
-            "conflicts_flagged": {k: {"records": c["records"], "overlap": c["overlap"]} for k, c in st["conflicts"].items()},
+            "conflicts_flagged": {
+                k: {"records": c["records"], "overlap": [ledger.display_file(st["records"][c["records"][-1]], f) for f in c["overlap"]]}
+                for k, c in st["conflicts"].items()
+            },
             "record_of": r.rec_of,
             "question_of": r.q_of,
             "injections": r.injections,

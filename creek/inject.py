@@ -23,7 +23,11 @@ Keep each marker under 300 characters."""
 
 
 def tokens(text: str) -> int:
-    return (len(text) + CHARS_PER_TOKEN - 1) // CHARS_PER_TOKEN
+    return tokens_for(len(text))
+
+
+def tokens_for(chars: int) -> int:
+    return (chars + CHARS_PER_TOKEN - 1) // CHARS_PER_TOKEN
 
 
 def clip(text: str, limit: int) -> str:
