@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "creek-cc"
+version = "1.0.0"
+description = "Branch-and-merge decision tracking for long Claude Code sessions"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
+]
+
+[project.urls]
+Homepage = "https://github.com/arnavpopley/creek"
+
+[project.scripts]
+creek = "creek.cli:main"
+
+[tool.setuptools]
+packages = ["creek", "creek.hooks"]
+
+[tool.setuptools.package-data]
+creek = ["templates/*.html"]
