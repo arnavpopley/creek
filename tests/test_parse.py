@@ -17,6 +17,8 @@ class MarkerTest(unittest.TestCase):
 
     def test_node(self):
         self.assertEqual(self.one("creek: node Which key 'more' uses")["title"], "Which key 'more' uses")
+        self.assertEqual(self.one("creek: node h shortcut | h→/ added to the handler")["title"], "h shortcut")
+        self.assertEqual(self.one("creek: on 3 | starting the header")["node"], "3")
 
     def test_ask(self):
         self.assertEqual(self.one("creek: ask Which key should 'more' use?")["text"], "Which key should 'more' use?")

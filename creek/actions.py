@@ -6,8 +6,10 @@ under one lock.
 
 from __future__ import annotations
 
+import re
+
 from . import terms
-from .model import ref
+from .model import id_num, ref
 
 
 def find_node(state: dict, text: str | None) -> str | None:
@@ -22,6 +24,35 @@ def find_node(state: dict, text: str | None) -> str | None:
         if n["title"].strip().lower() == want:
             return k
     return None
+
+
+def _title_words(text: str) -> set[str]:
+    words = re.findall(r"[a-z0-9]+", text.lower())
+    # Crude singular so "shortcut" finds "shortcuts".
+    return {w[:-1] if len(w) > 3 and w.endswith("s") else w for w in words if len(w) >= 3 and w not in terms.STOP}
+
+
+def match_node(state: dict, text: str | None, threshold: float = 0.6) -> str | None:
+    """An exact id or title, else the node whose title contains most of `text`'s words.
+
+    The model often names a node by a short paraphrase ("h shortcut" for
+    "Add keyboard shortcuts: …"); matching it keeps the work on one node
+    instead of starting a duplicate.
+    """
+    nid = find_node(state, text)
+    if nid or not text or ref(text, "node"):
+        return nid
+    want = _title_words(text)
+    if not want:
+        return None
+    best, best_key = None, (0.0, 0)
+    for k, n in state["nodes"].items():
+        if n["status"] == "abandoned":
+            continue
+        hit = len(want & _title_words(n["title"])) / len(want)
+        if hit >= threshold and (hit, id_num(k)) > best_key:
+            best, best_key = k, (hit, id_num(k))
+    return best
 
 
 def focus_of(state: dict, session: str) -> tuple[str | None, str | None]:
@@ -44,7 +75,7 @@ def create_node(tx, title: str, origin: str, **extra) -> str:
 def start_on(tx, node_text: str) -> str | None:
     """`creek: on <node>`: focus it, opening an inline branch if it was already settled."""
     st = tx.state
-    nid = find_node(st, node_text)
+    nid = match_node(st, node_text)
     if nid is None:
         if ref(node_text, "node"):
             tx.emit({"type": "error", "where": "marker", "msg": f"creek: on {node_text}: no such node"})
@@ -81,7 +112,7 @@ def add_record(tx, node: str, decision: str, rule=None, affects=None, tags=None,
 
 def resolve(tx, marker: dict, source_msg: dict | None = None, env_branch: str | None = None) -> str:
     st = tx.state
-    nid = find_node(st, marker.get("node"))
+    nid = match_node(st, marker.get("node"))
     if nid is None and marker.get("node") and not ref(marker["node"], "node"):
         # A title we haven't seen: treat it as a new point.
         nid = create_node(tx, marker["node"][:200], "model")
@@ -121,8 +152,9 @@ def apply_markers(tx, markers: list[dict], source_msg: dict | None = None, env_b
         if kind == "on":
             nid = start_on(tx, m["node"])
         elif kind == "node":
-            existing = find_node(tx.state, m["title"])
-            nid = existing or create_node(tx, m["title"], "model")
+            # A "new" point whose words all appear in an existing node is more work on that node.
+            existing = match_node(tx.state, m["title"], threshold=1.0)
+            nid = start_on(tx, existing) if existing else create_node(tx, m["title"], "model")
         elif kind == "resolve":
             nid = resolve(tx, m, source_msg=source_msg, env_branch=env_branch)
         elif kind == "ask":

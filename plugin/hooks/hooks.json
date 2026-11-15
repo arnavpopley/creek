@@ -1,12 +1,66 @@
 {
   "hooks": {
-    "SessionStart": [{"hooks": [{"type": "command", "command": "creek hook session-start"}]}],
-    "UserPromptSubmit": [{"hooks": [{"type": "command", "command": "creek hook user-prompt-submit"}]}],
-    "PreToolUse": [{"matcher": "Edit|Write|MultiEdit|NotebookEdit",
-                    "hooks": [{"type": "command", "command": "creek hook pre-tool-use"}]}],
-    "PostToolUse": [{"matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
-                     "hooks": [{"type": "command", "command": "creek hook post-tool-use"}]}],
-    "Stop": [{"hooks": [{"type": "command", "command": "creek hook stop"}]}],
-    "PreCompact": [{"hooks": [{"type": "command", "command": "creek hook pre-compact"}]}]
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "creek hook session-start"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "creek hook user-prompt-submit"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|mcp__.*(Edit|Write).*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "creek hook pre-tool-use"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash|mcp__.*(Edit|Write).*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "creek hook post-tool-use"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "creek hook stop"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "creek hook pre-compact"
+          }
+        ]
+      }
+    ]
   }
 }

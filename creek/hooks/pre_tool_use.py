@@ -1,4 +1,7 @@
-"""PreToolUse on edits: show matching records (§7.3). Never blocks or changes permissions."""
+"""PreToolUse on edits (built-in, plugin edit tools, file-writing Bash): show matching records (§7.3).
+
+Never blocks or changes permissions.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +14,7 @@ def run(payload: dict) -> dict | None:
     state = ledger.fresh_state(cdir)
     if not state or not state["records"]:
         return None
-    hits = guard.check(state, payload.get("tool_input") or {}, session)
+    hits = guard.check(state, payload.get("tool_input") or {}, session, tool_name=payload.get("tool_name") or "Edit")
     if not hits:
         return None
     text = inject.render_guard(hits)
