@@ -10,6 +10,8 @@ def run(payload: dict) -> dict | None:
     cdir, session = locate(payload)
     prompt = payload.get("prompt") or ""
     cmd = parse.parse_command(prompt)
+    if cmd and cmd[0] == "map":
+        return _map(cdir, session)
     if cmd:
         return {"decision": "block", "reason": commands.handle(cdir, session, cmd[0], cmd[1], payload)}
 
@@ -43,3 +45,20 @@ def run(payload: dict) -> dict | None:
             text = "\n\n".join(parts)
             tx.emit({"type": "inject", "hook": "user-prompt-submit", "records": [], "chars": len(text)})
     return context_output("UserPromptSubmit", text) if parts else None
+
+
+def _map(cdir, session: str) -> dict:
+    """::map — inside Orca, show the view in the chat; elsewhere, write it and say where."""
+    from .. import mapview
+
+    state = ledger.load_state(cdir)
+    out = mapview.write(cdir, state)
+    line = mapview.write_orca(cdir, state)
+    if not line:
+        return {"decision": "block", "reason": f"Creek: wrote {out}. Open it in a browser, or run `creek map --open`."}
+    # This one needs Claude: only its reply can carry the line that shows the view.
+    text = f"The user typed ::map. Creek has written its view. Reply with exactly this line and nothing else (no creek: markers):\n{line}"
+    with ledger.transaction(cdir, session) as tx:
+        tx.emit({"type": "turn"})
+        tx.emit({"type": "inject", "hook": "user-prompt-submit", "records": [], "chars": len(text)})
+    return context_output("UserPromptSubmit", text)

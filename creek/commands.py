@@ -7,8 +7,9 @@ import os
 from . import actions, ledger, transcript
 from .model import ref
 
-HELP = """Creek commands (never sent to Claude):
+HELP = """Creek commands (never sent to Claude, except ::map inside Orca):
 ::status                 open nodes, questions, conflicts
+::map                    show the board (inline in Orca; otherwise writes .creek/map.html)
 ::answer q1 <answer>     answer a queued question
 ::branch 13              open an inline branch on n13
 ::merge                  close the current branch with its latest record
@@ -60,7 +61,7 @@ def _answer(tx, args, payload):
     nid = q.get("node") if q.get("node") in st["nodes"] else None
     if nid is None:
         nid = actions.create_node(tx, q["text"][:80], "user")
-    rid = actions.add_record(tx, nid, f"{q['text'].rstrip('?')}? {answer}", question=qid)
+    rid = actions.add_record(tx, nid, f"{answer} (your answer to: {q['text']})", question=qid)
     tx.emit({"type": "question.answer", "question": qid, "answer": answer, "record": rid})
     return f"Creek: {qid} answered ({answer}); recorded as {rid} on {nid}. Claude sees it with your next message."
 

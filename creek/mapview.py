@@ -20,7 +20,7 @@ def payload(state: dict, project: str) -> dict:
     view = {k: v for k, v in state.items() if k not in _DROP}
     view["records"] = {}
     for rid, r in state.get("records", {}).items():
-        r = {k: v for k, v in r.items() if k != "source_msg"}
+        r = {k: v for k, v in r.items() if k not in ("source_msg", "terms", "affects_norm")}
         r["display_files"] = list(dict.fromkeys(ledger.display_file(r, f) for f in r.get("files", [])))
         view["records"][rid] = r
     view["conflicts"] = {}
@@ -53,6 +53,34 @@ def write(cdir: Path | None = None, state: dict | None = None) -> Path:
     return out
 
 
+ORCA_LIMIT = 500_000
+
+
+def orca_dir() -> Path | None:
+    """The Orca chat's scratch folder when running inside Orca, if writable."""
+    d = os.environ.get("ORCA_CHAT_SCRATCH_DIR")
+    if not d or not os.path.isdir(d) or not os.access(d, os.W_OK):
+        return None
+    return Path(d)
+
+
+def write_orca(cdir: Path | None = None, state: dict | None = None) -> str | None:
+    """Write the view into the Orca chat folder. Returns the line that shows it inline."""
+    d = orca_dir()
+    if d is None:
+        return None
+    cdir = cdir or paths.creek_dir()
+    state = state if state is not None else ledger.load_state(cdir)
+    project = cdir.parent.name
+    html = render(state, project)
+    if len(html.encode()) > ORCA_LIMIT:
+        return None
+    slug = "".join(c if c.isalnum() else "-" for c in project.lower()).strip("-")[:30] or "project"
+    name = f"creek-{slug}-{os.urandom(3).hex()}.html"
+    (d / name).write_text(html, encoding="utf-8")
+    return f'::orca-visual{{file="{name}" title="Creek · {project}"}}'
+
+
 def open_file(path: Path) -> None:
     opener = "open" if sys.platform == "darwin" else "xdg-open"
     try:
@@ -62,8 +90,14 @@ def open_file(path: Path) -> None:
 
 
 def run(open_after: bool = False) -> int:
-    out = write()
+    cdir = paths.creek_dir()
+    state = ledger.load_state(cdir)
+    out = write(cdir, state)
     print(f"creek map: wrote {os.path.relpath(out)}")
+    line = write_orca(cdir, state)
+    if line:
+        # Inside Orca: this line, put in Claude's reply, shows the view in the chat.
+        print(line)
     if open_after:
         open_file(out)
     return 0

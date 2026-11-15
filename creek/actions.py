@@ -141,6 +141,9 @@ def resolve(tx, marker: dict, source_msg: dict | None = None, env_branch: str | 
 
 def ask(tx, text: str) -> str:
     fnode, _ = focus_of(tx.state, tx.session)
+    if fnode is None:
+        # File the question under the point it is about, so answering it settles that point.
+        fnode = match_node(tx.state, text)
     return tx.emit({"type": "question.ask", "text": text, "norm": terms.normalize_question(text), "node": fnode})["question"]
 
 

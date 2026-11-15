@@ -1,4 +1,5 @@
 import json
+import re
 import os
 import subprocess
 import sys
@@ -230,3 +231,35 @@ class InstallTest(ProjectCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MapCommandTest(HookCase):
+    def test_map_inside_orca_shows_inline(self):
+        scratch = self.tmp / "orca-scratch"
+        scratch.mkdir()
+        self.hook("stop", last_assistant_message="creek: node Header\ncreek: resolve 1 | decision: sticky header | affects: style.css")
+        out = self.hook("user-prompt-submit", env={"ORCA_CHAT_SCRATCH_DIR": str(scratch)}, prompt="::map")
+        ctx = self.context(out)
+        m = re.search(r'::orca-visual\{file="(creek-[\w.-]+\.html)" title="Creek · [^"]+"\}', ctx)
+        self.assertIsNotNone(m, ctx)
+        page = (scratch / m.group(1)).read_text()
+        self.assertIn("sticky header", page)
+        self.assertLess(len(page.encode()), 512_000)
+
+    def test_map_outside_orca_writes_file_and_blocks(self):
+        env = {"ORCA_CHAT_SCRATCH_DIR": ""}
+        out = self.hook("user-prompt-submit", env=env, prompt="::map")
+        self.assertEqual(out["decision"], "block")
+        self.assertIn("map.html", out["reason"])
+        self.assertTrue((self.cdir / "map.html").exists())
+
+    def test_question_files_under_matching_point(self):
+        self.hook("user-prompt-submit", prompt="1. Make the header sticky\n2. Add keyboard shortcuts\n3. Pick an accent colour for links")
+        self.hook("stop", last_assistant_message="creek: ask What accent colour should links use?")
+        st = self.state()
+        self.assertEqual(st["questions"]["q1"]["node"], "n3")
+        out = self.hook("user-prompt-submit", prompt="::answer q1 teal")
+        self.assertIn("on n3", out["reason"])
+        st = self.state()
+        self.assertEqual(len(st["nodes"]), 3)
+        self.assertEqual(st["records"]["r1"]["decision"], "teal (your answer to: What accent colour should links use?)")

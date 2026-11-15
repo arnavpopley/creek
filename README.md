@@ -60,6 +60,7 @@ Prompts starting with `::` are handled by Creek and never reach Claude (zero tok
 | command | does |
 |---|---|
 | `::status` | open nodes, questions, conflicts, open branches |
+| `::map` | the board: inline in the chat when you're in Orca, otherwise `.creek/map.html` |
 | `::answer q1 o` | answers a question, records it, tells Claude on your next message |
 | `::branch 13` | opens an inline branch on n13 |
 | `::merge` | closes the current branch with its latest record |
@@ -73,7 +74,7 @@ Prompts starting with `::` are handled by Creek and never reach Claude (zero tok
 ```
 creek status                  same as ::status
 creek fork <node>             work on a node in a forked session (see below)
-creek map [--open]            writes .creek/map.html: lanes, "needs you", searchable ledger
+creek map [--open]            writes .creek/map.html (and, inside Orca, prints the line that shows it in chat)
 creek sync                    PR state and review scores from gh
 creek cost                    what Creek injected, per hook, against the transcript's token usage
 creek replay <fixture.json>   loads a session reconstruction into a fresh ledger (testing)
