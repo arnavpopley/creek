@@ -119,6 +119,7 @@ def empty_state() -> dict:
         "injected": {},
         "turn": {},
         "pending_notes": {},
+        "pending_pulls": {},
         "sessions": {},
         "cost": {},
         "errors": 0,

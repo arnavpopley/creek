@@ -1,5 +1,45 @@
-"""UserPromptSubmit: placeholder until M3."""
+"""UserPromptSubmit: `::` commands, brief splitting, change notes (§7.2)."""
+
+from __future__ import annotations
+
+from .. import actions, commands, inject, ledger, parse
+from . import context_output, locate
 
 
-def run(payload):
-    return None
+def run(payload: dict) -> dict | None:
+    cdir, session = locate(payload)
+    prompt = payload.get("prompt") or ""
+    cmd = parse.parse_command(prompt)
+    if cmd:
+        return {"decision": "block", "reason": commands.handle(cdir, session, cmd[0], cmd[1], payload)}
+
+    titles = parse.split_brief(prompt)
+    parts: list[str] = []
+    with ledger.transaction(cdir, session) as tx:
+        st = tx.state
+        if titles:
+            created = []
+            brief_id = f"p{st['turn'].get(session, 0) + 1}-{st['seq']}"
+            for i, title in enumerate(titles, 1):
+                same = actions.find_node(st, title)
+                if same and st["nodes"][same]["status"] == "open":
+                    continue  # the same brief pasted again
+                created.append(actions.create_node(tx, title, "brief", brief_id=brief_id, order=i))
+            if created:
+                span = f"{created[0]}–{created[-1]}" if len(created) > 1 else created[0]
+                parts.append(f"Creek: created {span} from this brief, in order.")
+        notes = st["pending_notes"].get(session) or []
+        if notes:
+            text, used = inject.render_notes(notes)
+            if text:
+                parts.append(text)
+            tx.emit({"type": "notes.clear", "count": used})
+        pulls = st.get("pending_pulls", {}).get(session) or []
+        if pulls:
+            parts.append("Creek: records you asked for (::pull) —\n" + "\n\n".join(pulls))
+            tx.emit({"type": "pulls.clear", "count": len(pulls)})
+        tx.emit({"type": "turn"})
+        if parts:
+            text = "\n\n".join(parts)
+            tx.emit({"type": "inject", "hook": "user-prompt-submit", "records": [], "chars": len(text)})
+    return context_output("UserPromptSubmit", text) if parts else None

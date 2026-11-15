@@ -10,6 +10,10 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["hook"]:
         return run_hook(argv[1] if len(argv) > 1 else "")
+    if argv[:1] == ["statusline"]:
+        from .statusline import main as statusline_main
+
+        return statusline_main(argv[1:])
     return _main(argv)
 
 
@@ -98,6 +102,12 @@ def cmd_status(args) -> int:
     return 0
 
 
+def cmd_install(args) -> int:
+    from . import install
+
+    return install.install(dry_run=args.dry_run, remove=args.remove)
+
+
 def cmd_doctor(args) -> int:
     from . import doctor
 
@@ -118,6 +128,14 @@ def _main(argv: list[str]) -> int:
     d = sub.add_parser("doctor", help="hook latency, ledger integrity, PATH check")
     d.add_argument("--quick", action="store_true", help="skip the latency benchmark")
     d.set_defaults(fn=cmd_doctor)
+
+    i = sub.add_parser("install", help="set up the status line and check the plugin is enabled")
+    i.add_argument("--dry-run", action="store_true", help="show the settings change without writing it")
+    i.add_argument("--remove", action="store_true", help="take Creek out of the status line again")
+    i.set_defaults(fn=cmd_install)
+
+    sl = sub.add_parser("statusline", help="print the one-line status (Claude Code runs this)")
+    sl.add_argument("--then", metavar="CMD", help="run an existing status line command first")
 
     h = sub.add_parser("hook", help="internal: called by Claude Code hooks")
     h.add_argument("event")

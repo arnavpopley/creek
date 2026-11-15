@@ -490,7 +490,9 @@ def _question_answer(state, ev, s):
     q["status"] = "answered"
     q["answer"] = ev.get("answer")
     q["record"] = ev.get("record")
-    _note(state, s, f"The user answered {ev['question']} ({q['text'][:120]}): {str(ev.get('answer'))[:200]}")
+    rec = state["records"].get(ev.get("record") or "", {})
+    where = f" (recorded as {ev['record']} on {rec['node']})" if rec else ""
+    _note(state, s, f"The user answered {ev['question']} ({q['text'][:120]}): {str(ev.get('answer'))[:200]}{where}")
 
 
 def _conflict_flag(state, ev, s):
@@ -580,6 +582,17 @@ def _notes_clear(state, ev, s):
     del notes[: int(ev.get("count", len(notes)))]
 
 
+def _pull(state, ev, s):
+    pulls = state.setdefault("pending_pulls", {}).setdefault(s, [])
+    pulls.append(str(ev.get("text", ""))[:4000])
+    del pulls[:-2]
+
+
+def _pulls_clear(state, ev, s):
+    pulls = state.setdefault("pending_pulls", {}).get(s, [])
+    del pulls[: int(ev.get("count", len(pulls)))]
+
+
 def _error(state, ev, s):
     state["errors"] += 1
 
@@ -604,6 +617,8 @@ _HANDLERS = {
     "turn": _turn_ev,
     "note": _note_ev,
     "notes.clear": _notes_clear,
+    "pull": _pull,
+    "pulls.clear": _pulls_clear,
     "error": _error,
 }
 
