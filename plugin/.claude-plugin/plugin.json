@@ -1,0 +1,5 @@
+{
+  "name": "creek",
+  "version": "1.0.0",
+  "description": "Branch-and-merge decision tracking for long Claude Code sessions"
+}
