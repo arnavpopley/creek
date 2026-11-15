@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Creek · __CREEK_TITLE__</title>
+<style>
+  :root {
+    --bg: #fbfaf8; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --faint: #9a9893;
+    --line: #e6e3dd; --hover: #f3f1ec; --accent: #2f6f9f; --accent-soft: #e5eff7;
+    --ok: #3b7d4f; --warn: #b4581d; --warn-soft: #fbeee4; --tab: #8a6d1d; --tab-soft: #f6f0dc;
+    --drop: #8f8b84; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --panel: #1e1e1b; --ink: #ecebe7; --muted: #a3a19b; --faint: #77756f;
+      --line: #33322e; --hover: #272623; --accent: #7fb3dc; --accent-soft: #1f2d38;
+      --ok: #7dc092; --warn: #f0a26b; --warn-soft: #3a261a; --tab: #dcc276; --tab-soft: #332c17; --drop: #85827b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); }
+  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line);
+           display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; padding: 12px 20px; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: .01em; }
+  header h1 span { color: var(--muted); font-weight: 500; }
+  #summary { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
+  #search { margin-left: auto; min-width: 260px; flex: 0 1 360px; padding: 7px 10px; border-radius: 7px;
+            border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; }
+  #search:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); grid-template-areas: "lanes needs" "ledger ledger";
+         gap: 16px; padding: 16px 20px 40px; align-items: start; }
+  #lanes-pane { grid-area: lanes; } #needs-pane { grid-area: needs; position: sticky; top: 72px; max-height: calc(100vh - 88px); overflow: auto; }
+  #ledger-pane { grid-area: ledger; }
+  @media (max-width: 980px) { main { grid-template-columns: minmax(0, 1fr); grid-template-areas: "needs" "lanes" "ledger"; padding: 12px 16px 32px; }
+    header { padding: 10px 16px; } .node, .br, .need { padding-left: 10px; padding-right: 10px; } .detail { margin-left: 24px; }
+    .br .files { display: none; } .br { grid-template-columns: 0 72px minmax(0, 1fr) 0; } .need { grid-template-columns: minmax(0, 1fr); }
+    #needs-pane { position: static; max-height: none; } #search { margin-left: 0; flex-basis: 100%; } }
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
+  section > h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
+                 margin: 0; padding: 12px 16px 10px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: baseline; }
+  section > h2 .count { font-family: var(--mono); letter-spacing: 0; text-transform: none; color: var(--faint); }
+  #lanes { font-family: var(--mono); font-size: 13px; padding: 6px 0 10px; }
+  .node { display: grid; grid-template-columns: 22px 44px minmax(0, 1fr) auto; gap: 0 6px; align-items: baseline;
+          padding: 4px 16px; cursor: default; }
+  .node:hover, .br:hover { background: var(--hover); }
+  .glyph { text-align: center; }
+  .g-resolved { color: var(--ok); } .g-open { color: var(--accent); } .g-tabled { color: var(--tab); } .g-abandoned { color: var(--drop); }
+  .nid { color: var(--faint); }
+  .title { font-family: var(--sans); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .node.abandoned .title { color: var(--drop); text-decoration: line-through; }
+  .meta { color: var(--muted); font-size: 12px; white-space: nowrap; display: flex; gap: 8px; }
+  .pill { border-radius: 99px; padding: 0 7px; font-size: 11.5px; }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); }
+  .pill.q { background: var(--accent-soft); color: var(--accent); }
+  .pill.tab { background: var(--tab-soft); color: var(--tab); }
+  .reason { grid-column: 3 / 5; color: var(--muted); font-family: var(--sans); font-size: 12.5px; }
+  .br { display: grid; grid-template-columns: 22px 72px minmax(0, 1fr) auto; gap: 0 6px; padding: 2px 16px 2px 16px; cursor: pointer; }
+  .br .rail { color: var(--faint); text-align: right; }
+  .br .what { font-family: var(--sans); font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .br.open-detail .what { white-space: normal; }
+  .br .files { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+  .detail { margin: 2px 16px 8px 116px; padding: 8px 12px; border-left: 2px solid var(--line); font-family: var(--sans); font-size: 13px; color: var(--muted); }
+  .detail h4 { margin: 6px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 600; }
+  .detail ul { margin: 0; padding-left: 18px; } .detail code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+  .hidden { display: none !important; }
+  .empty { padding: 14px 16px; color: var(--faint); }
+  #needs { padding: 4px 0 8px; }
+  .need { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 8px 16px; border-top: 1px solid var(--line); align-items: center; }
+  .need:first-child { border-top: 0; }
+  .need .t { font-size: 13.5px; } .need .t b { font-family: var(--mono); font-weight: 600; font-size: 12.5px; margin-right: 6px; }
+  .need .sub { grid-column: 1 / 3; color: var(--muted); font-size: 12px; }
+  .cmd { display: inline-flex; gap: 6px; align-items: center; font-family: var(--mono); font-size: 12px; background: var(--hover);
+         border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; color: var(--ink); white-space: nowrap; }
+  .cmd:hover { border-color: var(--accent); } .cmd.copied { border-color: var(--ok); color: var(--ok); }
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+  th, td { text-align: left; vertical-align: top; padding: 6px 10px; border-top: 1px solid var(--line); }
+  th { font-weight: 600; color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; border-top: 0; position: sticky; top: 0; background: var(--panel); }
+  td.id { font-family: var(--mono); white-space: nowrap; }
+  td.files { font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-width: 340px; overflow-wrap: anywhere; }
+  td.dec { min-width: 260px; } td.rule { min-width: 220px; }
+  tr.inactive td { color: var(--faint); }
+  mark { background: var(--accent-soft); color: inherit; border-radius: 3px; padding: 0 1px; }
+  .opts { margin-left: auto; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--muted); }
+  footer { color: var(--faint); font-size: 12px; padding: 0 20px 24px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Creek <span>· __CREEK_TITLE__</span></h1>
+  <div id="summary"></div>
+  <input id="search" type="search" placeholder="Search records by file or term, e.g. ContactList.tsx" autocomplete="off" spellcheck="false">
+</header>
+<main>
+  <section id="lanes-pane" aria-label="Lanes">
+    <h2>Lanes <span class="count" id="lanes-count"></span></h2>
+    <div id="lanes"></div>
+  </section>
+    <section id="needs-pane" aria-label="Needs you">
+      <h2>Needs you <span class="count" id="needs-count"></span></h2>
+      <div id="needs"></div>
+    </section>
+    <section id="ledger-pane" aria-label="Ledger">
+      <h2>Ledger <span class="count" id="ledger-count"></span>
+        <label class="opts"><input type="checkbox" id="show-inactive"> superseded</label></h2>
+      <div class="tablewrap"><table>
+        <thead><tr><th>id</th><th>node</th><th>decision</th><th>rule</th><th>affects</th><th>superseded by</th><th>PR</th></tr></thead>
+        <tbody id="ledger"></tbody>
+      </table></div>
+      <div class="empty hidden" id="ledger-empty">No records match.</div>
+    </section>
+</main>
+<footer id="foot"></footer>
+<script type="application/json" id="creek-data">__CREEK_DATA__</script>
+<script>
+(function () {
+  "use strict";
+  var t0 = performance.now();
+  var DATA = JSON.parse(document.getElementById("creek-data").textContent);
+  var S = DATA.state;
+  var nodes = S.nodes || {}, branches = S.branches || {}, records = S.records || {},
+      questions = S.questions || {}, conflicts = S.conflicts || {}, prs = S.prs || {};
+  var GLYPH = { resolved: "●", open: "○", tabled: "◐", abandoned: "✕" };
+  var BGLYPH = { merged: "●", open: "○", tabled: "◐" };
+
+  function num(id) { return parseInt(String(id).slice(1), 10) || 0; }
+  function byNum(a, b) { return num(a) - num(b); }
+  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
+  function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
+  function base(f) { f = String(f); var i = f.lastIndexOf("/"); return i < 0 ? f : f.slice(i + 1); }
+  function filesOf(rec) { return rec.display_files || []; }
+
+  // Index open conflicts and questions by node.
+  var conflictsByNode = {}, questionsByNode = {};
+  Object.keys(conflicts).sort(byNum).forEach(function (cid) {
+    var c = conflicts[cid];
+    if (c.status !== "open") return;
+    c.records.forEach(function (rid) {
+      var r = records[rid]; if (!r) return;
+      (conflictsByNode[r.node] = conflictsByNode[r.node] || []).indexOf(cid) < 0 && conflictsByNode[r.node].push(cid);
+    });
+  });
+  Object.keys(questions).sort(byNum).forEach(function (qid) {
+    var q = questions[qid];
+    if (q.node) (questionsByNode[q.node] = questionsByNode[q.node] || []).push(qid);
+  });
+
+  // Summary line ------------------------------------------------------------
+  var openN = 0, tabledN = 0, unrec = 0;
+  Object.keys(nodes).forEach(function (k) { var n = nodes[k]; if (n.status === "open") openN++; if (n.status === "tabled") tabledN++; if (n.unrecorded) unrec++; });
+  var openQ = Object.keys(questions).filter(function (k) { return questions[k].status === "open"; });
+  var openC = Object.keys(conflicts).filter(function (k) { return conflicts[k].status === "open"; });
+  var parts = ["creek"];
+  if (openN) parts.push(openN + " open");
+  if (openQ.length) {
+    var top = openQ.slice().sort(function (a, b) { return questions[b].asks - questions[a].asks || byNum(a, b); })[0];
+    parts.push(openQ.length + " you (" + top + " ×" + questions[top].asks + ")");
+  }
+  if (openC.length) parts.push(openC.length + " conflict" + (openC.length > 1 ? "s" : ""));
+  if (unrec) parts.push(unrec + " unrecorded");
+  document.getElementById("summary").textContent = parts.length > 1 ? parts.join(" · ") : "creek · clear";
+
+  // Lanes ---------------------------------------------------------------------
+  var lanes = document.getElementById("lanes");
+  var nodeIds = Object.keys(nodes).sort(byNum);
+  document.getElementById("lanes-count").textContent = nodeIds.length + " nodes · " + Object.keys(branches).length + " branches";
+  var frag = document.createDocumentFragment();
+  nodeIds.forEach(function (nid) {
+    var n = nodes[nid];
+    var row = el("div", "node " + n.status);
+    row.dataset.node = nid;
+    var hasConflict = (conflictsByNode[nid] || []).length > 0;
+    var glyph = hasConflict ? "⚠" : (GLYPH[n.status] || "○");
+    var gcls = hasConflict ? "g-open" : "g-" + n.status;
+    var meta = [];
+    var recs = (n.records || []).filter(function (r) { return records[r]; });
+    if (recs.length) meta.push(esc(recs.slice(-2).join(" ")) + (n.status === "resolved" ? " ✓" : ""));
+    (conflictsByNode[nid] || []).forEach(function (c) { meta.push('<span class="pill warn">⚠ ' + c + "</span>"); });
+    (questionsByNode[nid] || []).forEach(function (q) {
+      if (questions[q].status === "open") meta.push('<span class="pill q">' + q + " ×" + questions[q].asks + "</span>");
+    });
+    if (n.unrecorded) meta.push('<span class="pill warn">unrecorded</span>');
+    if (n.status === "tabled") meta.push('<span class="pill tab">tabled</span>');
+    row.innerHTML = '<span class="glyph ' + gcls + '">' + glyph + '</span><span class="nid">' + nid +
+      '</span><span class="title" title="' + esc(n.title) + '">' + esc(n.title) + '</span><span class="meta">' + meta.join("") + "</span>";
+    if ((n.status === "tabled" || n.status === "abandoned") && n.reason) row.appendChild(el("span", "reason", (n.status === "tabled" ? "tabled: " : "dropped: ") + esc(n.reason)));
+    frag.appendChild(row);
+    (n.branches || []).forEach(function (bid, i) {
+      var b = branches[bid]; if (!b) return;
+      var last = i === n.branches.length - 1;
+      var rec = records[b.record] || records[(b.records || []).slice(-1)[0]];
+      var what = rec ? rec.decision : (b.reason ? "tabled: " + b.reason : (b.kind === "fork" ? "fork, " : "") + (b.status === "open" ? "open, no record yet" : b.status));
+      var files = rec ? filesOf(rec) : Object.keys(b.edits || {}).map(base);
+      var br = el("div", "br");
+      br.dataset.branch = bid;
+      br.innerHTML = '<span></span><span class="rail">' + (last ? "└─" : "├─") + '<span class="g-' + (b.status === "merged" ? "resolved" : b.status) + '">' +
+        (BGLYPH[b.status] || "○") + "</span> " + bid + '</span><span class="what">' + esc(what) +
+        '</span><span class="files">' + (files.length ? "[" + esc(files.slice(0, 3).join(", ")) + "]" : "") + "</span>";
+      br.addEventListener("click", function () { toggle(br, b, bid); });
+      frag.appendChild(br);
+    });
+  });
+  lanes.appendChild(frag);
+  if (!nodeIds.length) lanes.appendChild(el("div", "empty", "No nodes yet. Paste a numbered brief, or Claude adds them with creek: node."));
+
+  // Branch details are built only when a lane is expanded.
+  function toggle(row, b, bid) {
+    var next = row.nextElementSibling;
+    if (next && next.classList.contains("detail")) { next.remove(); row.classList.remove("open-detail"); return; }
+    row.classList.add("open-detail");
+    var d = el("div", "detail");
+    var html = "";
+    (b.records || []).forEach(function (rid) {
+      var r = records[rid]; if (!r) return;
+      html += "<h4>" + rid + (r.active ? "" : " · superseded by " + esc(r.superseded_by || "?")) + "</h4><div>" + esc(r.decision) + "</div>";
+      if (r.rule) html += "<div><b>Rule:</b> " + esc(r.rule) + "</div>";
+      if ((r.affects || []).length) html += "<div><code>" + esc(r.affects.join(", ")) + "</code></div>";
+    });
+    var edits = Object.keys(b.edits || {});
+    if (edits.length) html += "<h4>Edits</h4><ul>" + edits.map(function (f) { return "<li><code>" + esc(f) + "</code> ×" + b.edits[f] + "</li>"; }).join("") + "</ul>";
+    if ((b.prs || []).length) html += "<h4>PRs</h4><ul>" + b.prs.map(function (p) {
+      var pr = prs[String(p)] || {};
+      return "<li><code>#" + p + "</code> " + esc(pr.action || "") + (pr.score != null ? " · " + esc(pr.reviewer || "review") + " " + pr.score + "/5" : "") + "</li>";
+    }).join("") + "</ul>";
+    var qs = (questionsByNode[b.node] || []);
+    if (qs.length) html += "<h4>Questions on " + b.node + "</h4><ul>" + qs.map(function (q) {
+      var Q = questions[q];
+      return "<li><code>" + q + "</code> " + esc(Q.text) + " — asked " + Q.asks + "×" + (Q.status === "answered" ? ", answered: " + esc(Q.answer) : "") + "</li>";
+    }).join("") + "</ul>";
+    if (b.reason) html += "<h4>Tabled</h4><div>" + esc(b.reason) + "</div>";
+    html += "<h4>Branch</h4><div>" + esc(b.kind) + ", " + esc(b.status) + (b.ts ? " · opened " + esc(String(b.ts).slice(0, 16).replace("T", " ")) : "") + "</div>";
+    d.innerHTML = html || "Nothing recorded yet.";
+    row.after(d);
+  }
+
+  // Needs you -----------------------------------------------------------------
+  var needs = document.getElementById("needs"), nItems = 0;
+  function need(head, sub, cmd) {
+    var row = el("div", "need");
+    row.innerHTML = '<div class="t">' + head + "</div>";
+    if (cmd) {
+      var b = el("button", "cmd", esc(cmd) + ' <span aria-hidden="true">⧉</span>');
+      b.type = "button"; b.title = "Copy"; b.dataset.cmd = cmd;
+      b.addEventListener("click", function () { copy(cmd, b); });
+      row.appendChild(b);
+    }
+    if (sub) row.appendChild(el("div", "sub", sub));
+    needs.appendChild(row); nItems++;
+  }
+  openQ.sort(function (a, b) { return questions[b].asks - questions[a].asks || byNum(a, b); }).forEach(function (qid) {
+    var q = questions[qid];
+    need("<b>" + qid + "</b>" + esc(q.text), "asked " + q.asks + "×" + (q.node ? " · on " + q.node : ""), "::answer " + qid + " ");
+  });
+  openC.sort(byNum).forEach(function (cid) {
+    var c = conflicts[cid];
+    need("<b>" + cid + "</b>" + esc(c.records.join(" vs ")) + " on " + esc((c.display_overlap || c.overlap).join(", ")), "keep both, or retire the older one with ::supersede " + cid, "::ok " + cid);
+  });
+  nodeIds.forEach(function (nid) {
+    var n = nodes[nid];
+    if (n.status === "tabled") need("<b>" + nid + "</b>" + esc(n.title), "tabled" + (n.reason ? ": " + esc(n.reason) : ""), "::branch " + nid.slice(1));
+  });
+  nodeIds.forEach(function (nid) {
+    var n = nodes[nid];
+    if (n.unrecorded) need("<b>" + nid + "</b>" + esc(n.title), "a PR merged with no record; reopen it and ask Claude to resolve it", "::branch " + nid.slice(1));
+  });
+  document.getElementById("needs-count").textContent = nItems || "";
+  if (!nItems) needs.appendChild(el("div", "empty", "Nothing needs you."));
+
+  function copy(text, btn) {
+    function done() { btn.classList.add("copied"); setTimeout(function () { btn.classList.remove("copied"); }, 900); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } else fallback();
+    function fallback() {
+      var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
+      try { document.execCommand("copy"); done(); } catch (e) { /* ignore */ } ta.remove();
+    }
+  }
+
+  // Ledger --------------------------------------------------------------------
+  var tbody = document.getElementById("ledger");
+  var recIds = Object.keys(records).sort(byNum).reverse();
+  var rows = recIds.map(function (rid) {
+    var r = records[rid];
+    var tr = el("tr", r.active ? "" : "inactive");
+    var prList = (r.prs || []).map(function (p) { return "#" + p; }).join(" ");
+    tr.innerHTML = '<td class="id">' + rid + '</td><td class="id">' + esc(r.node) + '</td><td class="dec">' + esc(r.decision) + '</td><td class="rule">' + esc(r.rule || "") +
+      '</td><td class="files">' + esc((r.affects || []).join(", ")) + '</td><td class="id">' + esc(r.superseded_by || "") + '</td><td class="id">' + esc(prList) + "</td>";
+    var hay = [rid, r.node, r.decision, r.rule, (r.affects || []).join(" "), (r.tags || []).join(" "), (r.terms || []).join(" ")].join(" ").toLowerCase();
+    return { tr: tr, rec: r, hay: hay };
+  });
+  rows.forEach(function (x) { tbody.appendChild(x.tr); });
+
+  var search = document.getElementById("search"), showInactive = document.getElementById("show-inactive");
+  function matches(x, q) {
+    if (!q) return true;
+    return q.split(/\s+/).every(function (w) { return x.hay.indexOf(w) >= 0; });
+  }
+  function filter() {
+    var q = search.value.trim().toLowerCase(), shown = 0;
+    rows.forEach(function (x) {
+      var on = (x.rec.active || showInactive.checked) && matches(x, q);
+      x.tr.classList.toggle("hidden", !on);
+      if (on) shown++;
+    });
+    document.getElementById("ledger-count").textContent = shown + (q ? " match" + (shown === 1 ? "" : "es") : " active");
+    document.getElementById("ledger-empty").classList.toggle("hidden", shown > 0);
+    document.body.dataset.matches = rows.filter(function (x) { return !x.tr.classList.contains("hidden"); }).map(function (x) { return x.tr.firstChild.textContent; }).join(" ");
+  }
+  search.addEventListener("input", function () {
+    filter();
+    try { history.replaceState(null, "", search.value ? "#q=" + encodeURIComponent(search.value) : "#"); } catch (e) { /* file: urls */ }
+  });
+  showInactive.addEventListener("change", filter);
+  var h = /[#&]q=([^&]*)/.exec(location.hash);
+  if (h) search.value = decodeURIComponent(h[1]);
+  filter();
+
+  var ms = performance.now() - t0;
+  document.body.dataset.renderMs = ms.toFixed(1);
+  // Time from navigation start to a rendered page, for creek's own tests.
+  document.body.dataset.loadMs = performance.now().toFixed(1);
+  document.getElementById("foot").textContent = "Generated " + DATA.generated.replace("T", " ").replace("+00:00", " UTC") +
+    " by creek map · " + recIds.length + " records · rendered in " + ms.toFixed(0) + " ms";
+})();
+</script>
+</body>
+</html>
