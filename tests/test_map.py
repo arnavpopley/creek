@@ -50,9 +50,16 @@ class MapStaticTest(ProjectCase):
         self.assertNotIn("index", data["state"])
         self.assertNotIn("</", m.group(1))
 
-    def test_three_panes(self):
-        for pane in ('id="lanes-pane"', 'id="needs-pane"', 'id="ledger-pane"'):
+    def test_panes(self):
+        for pane in ('id="needs-pane"', 'id="points-pane"', 'id="decisions-pane"'):
             self.assertIn(pane, self.html)
+
+    def test_uses_orca_tokens_with_fallbacks(self):
+        css = self.html.split("<style>")[1].split("</style>")[0]
+        for token in ("--background", "--foreground", "--card", "--border", "--muted-foreground"):
+            self.assertIn(f"var({token},", css)
+        self.assertNotRegex(css, r":root\s*{[^}]*--background\s*:")  # never overrides Orca's theme
+        self.assertNotIn("100vh", css)
 
 
 @unittest.skipUnless(CHROME, "needs Chrome or Chromium for a headless render")
@@ -62,11 +69,10 @@ class MapBrowserTest(ProjectCase):
         state = ledger.load_state(self.cdir)
         out = mapview.write(self.cdir, state)
         dom = dump_dom(out, "#q=ContactList.tsx", self.tmp / "chrome")
-        # Lanes: every node and branch rendered.
-        self.assertEqual(len(re.findall(r'class="node ', dom)), 19)
-        self.assertEqual(len(re.findall(r'data-branch="b\d+"', dom)), 21)
-        # Needs you: three questions, three conflicts, the tabled pointer, each with its command.
-        for cmd in ("::answer q1 ", "::answer q2 ", "::answer q3 ", "::ok c1", "::branch 9"):
+        # Points: every node rendered as a card.
+        self.assertEqual(len(re.findall(r'<details class="point ', dom)), 19)
+        # Needs you: three questions and three conflicts, each with its command.
+        for cmd in ("::answer q1 ", "::answer q2 ", "::answer q3 ", "::ok c1", "::supersede c3"):
             self.assertIn(f'data-cmd="{cmd}"', dom)
         # Ledger search by file finds exactly the active records that affect it.
         want = {rid for rid, r in state["records"].items() if r["active"] and any(f.endswith("contactlist.tsx") for f in r["files"])}
@@ -88,7 +94,7 @@ class MapBrowserTest(ProjectCase):
         render_ms = float(re.search(r'data-render-ms="([\d.]+)"', dom).group(1))
         print(f"\n  300-node map: rendered in {render_ms:.0f} ms, {load_ms:.0f} ms from navigation start", flush=True)
         self.assertLess(load_ms, 1000)
-        self.assertEqual(len(re.findall(r'class="node ', dom)), 300)
+        self.assertEqual(len(re.findall(r'<details class="point ', dom)), 300)
 
 
 if __name__ == "__main__":

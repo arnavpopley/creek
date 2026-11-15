@@ -5,114 +5,134 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Creek · __CREEK_TITLE__</title>
 <style>
+  /* Orca's theme tokens when shown inside Orca, with fallbacks for a plain browser.
+     Local colours use their own names so Orca's live theme is never overridden. */
   :root {
-    --bg: #fbfaf8; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --faint: #9a9893;
-    --line: #e6e3dd; --hover: #f3f1ec; --accent: #2f6f9f; --accent-soft: #e5eff7;
-    --ok: #3b7d4f; --warn: #b4581d; --warn-soft: #fbeee4; --tab: #8a6d1d; --tab-soft: #f6f0dc;
-    --drop: #8f8b84; --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --ck-ok: #16a34a; --ck-open: #2563eb; --ck-wait: #d97706; --ck-bad: #dc2626; --ck-off: #8a8a8a;
   }
   @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #161614; --panel: #1e1e1b; --ink: #ecebe7; --muted: #a3a19b; --faint: #77756f;
-      --line: #33322e; --hover: #272623; --accent: #7fb3dc; --accent-soft: #1f2d38;
-      --ok: #7dc092; --warn: #f0a26b; --warn-soft: #3a261a; --tab: #dcc276; --tab-soft: #332c17; --drop: #85827b;
-    }
+    :root { --ck-ok: #4ade80; --ck-open: #60a5fa; --ck-wait: #fbbf24; --ck-bad: #f87171; --ck-off: #8a8a8a; }
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 var(--sans); }
-  header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line);
-           display: flex; flex-wrap: wrap; gap: 8px 20px; align-items: center; padding: 12px 20px; }
-  header h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: .01em; }
-  header h1 span { color: var(--muted); font-weight: 500; }
-  #summary { font-family: var(--mono); font-size: 12.5px; color: var(--muted); }
-  #search { margin-left: auto; min-width: 260px; flex: 0 1 360px; padding: 7px 10px; border-radius: 7px;
-            border: 1px solid var(--line); background: var(--panel); color: var(--ink); font: inherit; }
-  #search:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
-  main { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(300px, 1fr); grid-template-areas: "lanes needs" "ledger ledger";
-         gap: 16px; padding: 16px 20px 40px; align-items: start; }
-  #lanes-pane { grid-area: lanes; } #needs-pane { grid-area: needs; position: sticky; top: 72px; max-height: calc(100vh - 88px); overflow: auto; }
-  #ledger-pane { grid-area: ledger; }
-  @media (max-width: 980px) { main { grid-template-columns: minmax(0, 1fr); grid-template-areas: "needs" "lanes" "ledger"; padding: 12px 16px 32px; }
-    header { padding: 10px 16px; } .node, .br, .need { padding-left: 10px; padding-right: 10px; } .detail { margin-left: 24px; }
-    .br .files { display: none; } .br { grid-template-columns: 0 72px minmax(0, 1fr) 0; } .need { grid-template-columns: minmax(0, 1fr); }
-    #needs-pane { position: static; max-height: none; } #search { margin-left: 0; flex-basis: 100%; } }
-  section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; min-width: 0; }
-  section > h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted);
-                 margin: 0; padding: 12px 16px 10px; border-bottom: 1px solid var(--line); display: flex; gap: 8px; align-items: baseline; }
-  section > h2 .count { font-family: var(--mono); letter-spacing: 0; text-transform: none; color: var(--faint); }
-  #lanes { font-family: var(--mono); font-size: 13px; padding: 6px 0 10px; }
-  .node { display: grid; grid-template-columns: 22px 44px minmax(0, 1fr) auto; gap: 0 6px; align-items: baseline;
-          padding: 4px 16px; cursor: default; }
-  .node:hover, .br:hover { background: var(--hover); }
-  .glyph { text-align: center; }
-  .g-resolved { color: var(--ok); } .g-open { color: var(--accent); } .g-tabled { color: var(--tab); } .g-abandoned { color: var(--drop); }
-  .nid { color: var(--faint); }
-  .title { font-family: var(--sans); font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .node.abandoned .title { color: var(--drop); text-decoration: line-through; }
-  .meta { color: var(--muted); font-size: 12px; white-space: nowrap; display: flex; gap: 8px; }
-  .pill { border-radius: 99px; padding: 0 7px; font-size: 11.5px; }
-  .pill.warn { background: var(--warn-soft); color: var(--warn); }
-  .pill.q { background: var(--accent-soft); color: var(--accent); }
-  .pill.tab { background: var(--tab-soft); color: var(--tab); }
-  .reason { grid-column: 3 / 5; color: var(--muted); font-family: var(--sans); font-size: 12.5px; }
-  .br { display: grid; grid-template-columns: 22px 72px minmax(0, 1fr) auto; gap: 0 6px; padding: 2px 16px 2px 16px; cursor: pointer; }
-  .br .rail { color: var(--faint); text-align: right; }
-  .br .what { font-family: var(--sans); font-size: 13px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .br.open-detail .what { white-space: normal; }
-  .br .files { color: var(--muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
-  .detail { margin: 2px 16px 8px 116px; padding: 8px 12px; border-left: 2px solid var(--line); font-family: var(--sans); font-size: 13px; color: var(--muted); }
-  .detail h4 { margin: 6px 0 2px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); font-weight: 600; }
-  .detail ul { margin: 0; padding-left: 18px; } .detail code { font-family: var(--mono); font-size: 12px; color: var(--ink); }
+  body {
+    margin: 0; background: var(--background, #fff); color: var(--foreground, #171717);
+    font: 14px/1.5 var(--font-sans, system-ui, -apple-system, "Segoe UI", sans-serif);
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 18px 16px 24px; }
+  .mono { font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace); }
+  .muted { color: var(--muted-foreground, #6b6b6b); }
+
+  /* Header */
+  .top { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .top h1 { font-size: 18px; margin: 0; font-weight: 650; }
+  .top .proj { color: var(--muted-foreground, #6b6b6b); font-weight: 500; }
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin-bottom: 18px; }
+  @media (max-width: 560px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .stat { background: var(--card, #fafafa); color: var(--card-foreground, #171717); border: 1px solid var(--border, #e5e5e5);
+          border-radius: var(--radius, 10px); padding: 10px 12px; }
+  .stat b { display: block; font-size: 22px; line-height: 1.1; font-weight: 650; font-variant-numeric: tabular-nums; }
+  .stat span { font-size: 12.5px; color: var(--muted-foreground, #6b6b6b); }
+  .stat.attn b { color: var(--ck-wait); } .stat.bad b { color: var(--ck-bad); } .stat.good b { color: var(--ck-ok); }
+
+  h2 { font-size: 13px; font-weight: 600; margin: 0 0 8px; color: var(--muted-foreground, #6b6b6b); letter-spacing: .02em; }
+
+  /* Needs you */
+  .needs { margin-bottom: 20px; }
+  .need { display: flex; gap: 12px; align-items: flex-start; padding: 12px 14px; margin-bottom: 8px;
+          border: 1px solid var(--border, #e5e5e5); border-left: 3px solid var(--ck-wait);
+          border-radius: var(--radius, 10px); background: var(--card, #fafafa); color: var(--card-foreground, #171717); }
+  .need.conflict { border-left-color: var(--ck-bad); }
+  .need .body { flex: 1; min-width: 0; }
+  .need .q { font-weight: 550; }
+  .need .sub { font-size: 12.5px; color: var(--muted-foreground, #6b6b6b); margin-top: 2px; }
+  .need .quote { font-size: 13px; margin-top: 6px; padding-left: 10px; border-left: 2px solid var(--border, #e5e5e5); }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+  .cmd { font: 12px var(--font-mono, ui-monospace, Menlo, monospace); cursor: pointer; white-space: nowrap;
+         background: var(--secondary, #f2f2f2); color: var(--secondary-foreground, #171717);
+         border: 1px solid var(--border, #e5e5e5); border-radius: 7px; padding: 4px 9px; }
+  .cmd:hover { background: var(--accent, #ececec); color: var(--accent-foreground, #171717); }
+  .cmd.done { border-color: var(--ck-ok); color: var(--ck-ok); }
+  .hint { font-size: 12px; color: var(--muted-foreground, #6b6b6b); margin: -2px 0 8px; }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--border, #e5e5e5); margin-bottom: 12px; align-items: flex-end; }
+  .tab { background: none; border: 0; padding: 8px 12px; font: inherit; font-weight: 550; cursor: pointer;
+         color: var(--muted-foreground, #6b6b6b); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+  .tab[aria-selected="true"] { color: var(--foreground, #171717); border-bottom-color: var(--primary, #171717); }
+  .tab .n { font-weight: 450; color: var(--muted-foreground, #6b6b6b); margin-left: 4px; }
+  .filters { margin-left: auto; display: flex; gap: 4px; padding-bottom: 6px; }
+  .chip-btn { font: 12px inherit; font-family: inherit; border: 1px solid var(--border, #e5e5e5); border-radius: 999px; padding: 2px 10px;
+              background: var(--background, #fff); color: var(--muted-foreground, #6b6b6b); cursor: pointer; }
+  .chip-btn[aria-pressed="true"] { background: var(--primary, #171717); color: var(--primary-foreground, #fff); border-color: var(--primary, #171717); }
+
+  /* Points */
+  .point { border: 1px solid var(--border, #e5e5e5); border-radius: var(--radius, 10px); margin-bottom: 8px;
+           background: var(--card, #fafafa); color: var(--card-foreground, #171717); }
+  .point > summary { list-style: none; cursor: pointer; padding: 11px 14px; display: grid;
+                     grid-template-columns: auto minmax(0, 1fr) auto; gap: 2px 10px; align-items: baseline; }
+  .point > summary::-webkit-details-marker { display: none; }
+  .point[open] > summary { border-bottom: 1px solid var(--border, #e5e5e5); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; transform: translateY(-1px); }
+  .s-resolved .dot { background: var(--ck-ok); } .s-open .dot { background: var(--ck-open); }
+  .s-tabled .dot { background: var(--ck-wait); } .s-abandoned .dot { background: var(--ck-off); }
+  .title { font-weight: 550; overflow-wrap: anywhere; }
+  .s-abandoned .title { text-decoration: line-through; color: var(--muted-foreground, #6b6b6b); }
+  .id { font: 11.5px var(--font-mono, ui-monospace, Menlo, monospace); color: var(--muted-foreground, #6b6b6b); }
+  .latest { grid-column: 2 / 4; font-size: 13px; color: var(--muted-foreground, #6b6b6b); overflow-wrap: anywhere; }
+  .latest b { font-weight: 550; color: var(--foreground, #171717); }
+  .tags { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+  .tag { font-size: 11.5px; border-radius: 999px; padding: 0 8px; background: var(--secondary, #f2f2f2); color: var(--secondary-foreground, #444); }
+  .tag.file { font-family: var(--font-mono, ui-monospace, Menlo, monospace); font-size: 11px; }
+  .tag.warn { background: color-mix(in srgb, var(--ck-wait) 16%, transparent); color: var(--ck-wait); }
+  .tag.bad { background: color-mix(in srgb, var(--ck-bad) 14%, transparent); color: var(--ck-bad); }
+  .detail { padding: 10px 14px 14px; }
+  .step { position: relative; padding: 0 0 12px 18px; }
+  .step::before { content: ""; position: absolute; left: 4px; top: 7px; bottom: -3px; width: 1px; background: var(--border, #e5e5e5); }
+  .step:last-child::before { display: none; }
+  .step::after { content: ""; position: absolute; left: 0; top: 6px; width: 9px; height: 9px; border-radius: 50%;
+                 background: var(--card, #fafafa); border: 2px solid var(--ck-ok); }
+  .step.old::after { border-color: var(--ck-off); } .step.old .what { text-decoration: line-through; color: var(--muted-foreground, #6b6b6b); }
+  .step .what { font-weight: 500; }
+  .rule { font-size: 13px; margin-top: 2px; } .rule em { font-style: normal; font-weight: 550; }
+  .meta { font-size: 12px; color: var(--muted-foreground, #6b6b6b); margin-top: 3px; }
+  .detail .more { font-size: 12.5px; color: var(--muted-foreground, #6b6b6b); margin-top: 4px; }
+
+  /* Decisions */
+  .search { width: 100%; padding: 8px 11px; margin-bottom: 10px; border-radius: 8px; font: inherit;
+            border: 1px solid var(--input, #e5e5e5); background: var(--background, #fff); color: var(--foreground, #171717); }
+  .search:focus { outline: 2px solid var(--ring, #a3a3a3); outline-offset: 0; }
+  .dec { padding: 10px 2px; border-bottom: 1px solid var(--border, #e5e5e5); }
+  .dec:last-child { border-bottom: 0; }
+  .dec .what { font-weight: 550; }
+  .dec.old { opacity: .6; } .dec.old .what { text-decoration: line-through; }
+  .empty { padding: 18px 4px; color: var(--muted-foreground, #6b6b6b); }
   .hidden { display: none !important; }
-  .empty { padding: 14px 16px; color: var(--faint); }
-  #needs { padding: 4px 0 8px; }
-  .need { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; padding: 8px 16px; border-top: 1px solid var(--line); align-items: center; }
-  .need:first-child { border-top: 0; }
-  .need .t { font-size: 13.5px; } .need .t b { font-family: var(--mono); font-weight: 600; font-size: 12.5px; margin-right: 6px; }
-  .need .sub { grid-column: 1 / 3; color: var(--muted); font-size: 12px; }
-  .cmd { display: inline-flex; gap: 6px; align-items: center; font-family: var(--mono); font-size: 12px; background: var(--hover);
-         border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; cursor: pointer; color: var(--ink); white-space: nowrap; }
-  .cmd:hover { border-color: var(--accent); } .cmd.copied { border-color: var(--ok); color: var(--ok); }
-  .tablewrap { overflow-x: auto; }
-  table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  th, td { text-align: left; vertical-align: top; padding: 6px 10px; border-top: 1px solid var(--line); }
-  th { font-weight: 600; color: var(--muted); font-size: 11.5px; text-transform: uppercase; letter-spacing: .05em; border-top: 0; position: sticky; top: 0; background: var(--panel); }
-  td.id { font-family: var(--mono); white-space: nowrap; }
-  td.files { font-family: var(--mono); font-size: 11.5px; color: var(--muted); max-width: 340px; overflow-wrap: anywhere; }
-  td.dec { min-width: 260px; } td.rule { min-width: 220px; }
-  tr.inactive td { color: var(--faint); }
-  mark { background: var(--accent-soft); color: inherit; border-radius: 3px; padding: 0 1px; }
-  .opts { margin-left: auto; font-size: 12px; text-transform: none; letter-spacing: 0; color: var(--muted); }
-  footer { color: var(--faint); font-size: 12px; padding: 0 20px 24px; }
+  mark { background: color-mix(in srgb, var(--ck-wait) 28%, transparent); color: inherit; border-radius: 3px; }
+  footer { margin-top: 18px; font-size: 12px; color: var(--muted-foreground, #6b6b6b); }
 </style>
 </head>
 <body>
-<header>
-  <h1>Creek <span>· __CREEK_TITLE__</span></h1>
-  <div id="summary"></div>
-  <input id="search" type="search" placeholder="Search records by file or term, e.g. ContactList.tsx" autocomplete="off" spellcheck="false">
-</header>
-<main>
-  <section id="lanes-pane" aria-label="Lanes">
-    <h2>Lanes <span class="count" id="lanes-count"></span></h2>
-    <div id="lanes"></div>
+<div class="wrap">
+  <div class="top"><h1>Creek <span class="proj">· __CREEK_TITLE__</span></h1></div>
+  <div class="stats" id="stats"></div>
+  <section class="needs" id="needs-pane" aria-label="Needs you"></section>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" id="tab-points" aria-selected="true">Points<span class="n" id="n-points"></span></button>
+    <button class="tab" role="tab" id="tab-decisions" aria-selected="false">Decisions<span class="n" id="n-decisions"></span></button>
+    <div class="filters" id="filters">
+      <button class="chip-btn" data-f="all" aria-pressed="true">All</button>
+      <button class="chip-btn" data-f="open" aria-pressed="false">Open</button>
+      <button class="chip-btn" data-f="resolved" aria-pressed="false">Done</button>
+    </div>
+  </div>
+  <section id="points-pane" aria-label="Points"></section>
+  <section id="decisions-pane" class="hidden" aria-label="Decisions">
+    <input class="search" id="search" type="search" placeholder="Search by file, word or id, e.g. app.js or shortcut" autocomplete="off" spellcheck="false">
+    <div id="decisions"></div>
+    <div class="empty hidden" id="dec-empty">No decisions match.</div>
   </section>
-    <section id="needs-pane" aria-label="Needs you">
-      <h2>Needs you <span class="count" id="needs-count"></span></h2>
-      <div id="needs"></div>
-    </section>
-    <section id="ledger-pane" aria-label="Ledger">
-      <h2>Ledger <span class="count" id="ledger-count"></span>
-        <label class="opts"><input type="checkbox" id="show-inactive"> superseded</label></h2>
-      <div class="tablewrap"><table>
-        <thead><tr><th>id</th><th>node</th><th>decision</th><th>rule</th><th>affects</th><th>superseded by</th><th>PR</th></tr></thead>
-        <tbody id="ledger"></tbody>
-      </table></div>
-      <div class="empty hidden" id="ledger-empty">No records match.</div>
-    </section>
-</main>
-<footer id="foot"></footer>
+  <footer id="foot"></footer>
+</div>
 <script type="application/json" id="creek-data">__CREEK_DATA__</script>
 <script>
 (function () {
@@ -122,208 +142,233 @@
   var S = DATA.state;
   var nodes = S.nodes || {}, branches = S.branches || {}, records = S.records || {},
       questions = S.questions || {}, conflicts = S.conflicts || {}, prs = S.prs || {};
-  var GLYPH = { resolved: "●", open: "○", tabled: "◐", abandoned: "✕" };
-  var BGLYPH = { merged: "●", open: "○", tabled: "◐" };
+  var STATUS = { resolved: "Done", open: "Open", tabled: "Parked", abandoned: "Dropped" };
 
   function num(id) { return parseInt(String(id).slice(1), 10) || 0; }
   function byNum(a, b) { return num(a) - num(b); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); }
   function el(tag, cls, html) { var e = document.createElement(tag); if (cls) e.className = cls; if (html != null) e.innerHTML = html; return e; }
-  function base(f) { f = String(f); var i = f.lastIndexOf("/"); return i < 0 ? f : f.slice(i + 1); }
-  function filesOf(rec) { return rec.display_files || []; }
+  function title(nid) { return nodes[nid] ? nodes[nid].title : nid; }
+  function files(rec) { return rec.display_files || []; }
+  function when(ts) { return ts ? String(ts).slice(0, 16).replace("T", " ") : ""; }
 
-  // Index open conflicts and questions by node.
-  var conflictsByNode = {}, questionsByNode = {};
-  Object.keys(conflicts).sort(byNum).forEach(function (cid) {
-    var c = conflicts[cid];
-    if (c.status !== "open") return;
-    c.records.forEach(function (rid) {
-      var r = records[rid]; if (!r) return;
-      (conflictsByNode[r.node] = conflictsByNode[r.node] || []).indexOf(cid) < 0 && conflictsByNode[r.node].push(cid);
+  function copyBtn(cmd, label) {
+    var b = el("button", "cmd", esc(label || cmd));
+    b.type = "button"; b.dataset.cmd = cmd; b.title = "Copy, then paste into the chat";
+    b.addEventListener("click", function (ev) {
+      ev.preventDefault(); ev.stopPropagation();
+      var done = function () { b.classList.add("done"); var t = b.innerHTML; b.textContent = "copied"; setTimeout(function () { b.classList.remove("done"); b.innerHTML = t; }, 900); };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(cmd).then(done, fallback); else fallback();
+      function fallback() { var ta = document.createElement("textarea"); ta.value = cmd; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); done(); } catch (e) {} ta.remove(); }
     });
-  });
-  Object.keys(questions).sort(byNum).forEach(function (qid) {
-    var q = questions[qid];
-    if (q.node) (questionsByNode[q.node] = questionsByNode[q.node] || []).push(qid);
-  });
-
-  // Summary line ------------------------------------------------------------
-  var openN = 0, tabledN = 0, unrec = 0;
-  Object.keys(nodes).forEach(function (k) { var n = nodes[k]; if (n.status === "open") openN++; if (n.status === "tabled") tabledN++; if (n.unrecorded) unrec++; });
-  var openQ = Object.keys(questions).filter(function (k) { return questions[k].status === "open"; });
-  var openC = Object.keys(conflicts).filter(function (k) { return conflicts[k].status === "open"; });
-  var parts = ["creek"];
-  if (openN) parts.push(openN + " open");
-  if (openQ.length) {
-    var top = openQ.slice().sort(function (a, b) { return questions[b].asks - questions[a].asks || byNum(a, b); })[0];
-    parts.push(openQ.length + " you (" + top + " ×" + questions[top].asks + ")");
+    return b;
   }
-  if (openC.length) parts.push(openC.length + " conflict" + (openC.length > 1 ? "s" : ""));
-  if (unrec) parts.push(unrec + " unrecorded");
-  document.getElementById("summary").textContent = parts.length > 1 ? parts.join(" · ") : "creek · clear";
 
-  // Lanes ---------------------------------------------------------------------
-  var lanes = document.getElementById("lanes");
+  // Derived lists ---------------------------------------------------------------
   var nodeIds = Object.keys(nodes).sort(byNum);
-  document.getElementById("lanes-count").textContent = nodeIds.length + " nodes · " + Object.keys(branches).length + " branches";
-  var frag = document.createDocumentFragment();
-  nodeIds.forEach(function (nid) {
-    var n = nodes[nid];
-    var row = el("div", "node " + n.status);
-    row.dataset.node = nid;
-    var hasConflict = (conflictsByNode[nid] || []).length > 0;
-    var glyph = hasConflict ? "⚠" : (GLYPH[n.status] || "○");
-    var gcls = hasConflict ? "g-open" : "g-" + n.status;
-    var meta = [];
-    var recs = (n.records || []).filter(function (r) { return records[r]; });
-    if (recs.length) meta.push(esc(recs.slice(-2).join(" ")) + (n.status === "resolved" ? " ✓" : ""));
-    (conflictsByNode[nid] || []).forEach(function (c) { meta.push('<span class="pill warn">⚠ ' + c + "</span>"); });
-    (questionsByNode[nid] || []).forEach(function (q) {
-      if (questions[q].status === "open") meta.push('<span class="pill q">' + q + " ×" + questions[q].asks + "</span>");
-    });
-    if (n.unrecorded) meta.push('<span class="pill warn">unrecorded</span>');
-    if (n.status === "tabled") meta.push('<span class="pill tab">tabled</span>');
-    row.innerHTML = '<span class="glyph ' + gcls + '">' + glyph + '</span><span class="nid">' + nid +
-      '</span><span class="title" title="' + esc(n.title) + '">' + esc(n.title) + '</span><span class="meta">' + meta.join("") + "</span>";
-    if ((n.status === "tabled" || n.status === "abandoned") && n.reason) row.appendChild(el("span", "reason", (n.status === "tabled" ? "tabled: " : "dropped: ") + esc(n.reason)));
-    frag.appendChild(row);
-    (n.branches || []).forEach(function (bid, i) {
-      var b = branches[bid]; if (!b) return;
-      var last = i === n.branches.length - 1;
-      var rec = records[b.record] || records[(b.records || []).slice(-1)[0]];
-      var what = rec ? rec.decision : (b.reason ? "tabled: " + b.reason : (b.kind === "fork" ? "fork, " : "") + (b.status === "open" ? "open, no record yet" : b.status));
-      var files = rec ? filesOf(rec) : Object.keys(b.edits || {}).map(base);
-      var br = el("div", "br");
-      br.dataset.branch = bid;
-      br.innerHTML = '<span></span><span class="rail">' + (last ? "└─" : "├─") + '<span class="g-' + (b.status === "merged" ? "resolved" : b.status) + '">' +
-        (BGLYPH[b.status] || "○") + "</span> " + bid + '</span><span class="what">' + esc(what) +
-        '</span><span class="files">' + (files.length ? "[" + esc(files.slice(0, 3).join(", ")) + "]" : "") + "</span>";
-      br.addEventListener("click", function () { toggle(br, b, bid); });
-      frag.appendChild(br);
-    });
-  });
-  lanes.appendChild(frag);
-  if (!nodeIds.length) lanes.appendChild(el("div", "empty", "No nodes yet. Paste a numbered brief, or Claude adds them with creek: node."));
+  var openQ = Object.keys(questions).filter(function (k) { return questions[k].status === "open"; })
+    .sort(function (a, b) { return questions[b].asks - questions[a].asks || byNum(a, b); });
+  var openC = Object.keys(conflicts).filter(function (k) { return conflicts[k].status === "open"; }).sort(byNum);
+  var count = { open: 0, resolved: 0, tabled: 0, abandoned: 0 };
+  nodeIds.forEach(function (k) { count[nodes[k].status] = (count[nodes[k].status] || 0) + 1; });
+  var conflictsByNode = {};
+  openC.forEach(function (cid) { conflicts[cid].records.forEach(function (rid) { var r = records[rid]; if (r) (conflictsByNode[r.node] = conflictsByNode[r.node] || []).push(cid); }); });
+  var unrecorded = nodeIds.filter(function (k) { return nodes[k].unrecorded; });
 
-  // Branch details are built only when a lane is expanded.
-  function toggle(row, b, bid) {
-    var next = row.nextElementSibling;
-    if (next && next.classList.contains("detail")) { next.remove(); row.classList.remove("open-detail"); return; }
-    row.classList.add("open-detail");
-    var d = el("div", "detail");
-    var html = "";
-    (b.records || []).forEach(function (rid) {
-      var r = records[rid]; if (!r) return;
-      html += "<h4>" + rid + (r.active ? "" : " · superseded by " + esc(r.superseded_by || "?")) + "</h4><div>" + esc(r.decision) + "</div>";
-      if (r.rule) html += "<div><b>Rule:</b> " + esc(r.rule) + "</div>";
-      if ((r.affects || []).length) html += "<div><code>" + esc(r.affects.join(", ")) + "</code></div>";
-    });
-    var edits = Object.keys(b.edits || {});
-    if (edits.length) html += "<h4>Edits</h4><ul>" + edits.map(function (f) { return "<li><code>" + esc(f) + "</code> ×" + b.edits[f] + "</li>"; }).join("") + "</ul>";
-    if ((b.prs || []).length) html += "<h4>PRs</h4><ul>" + b.prs.map(function (p) {
-      var pr = prs[String(p)] || {};
-      return "<li><code>#" + p + "</code> " + esc(pr.action || "") + (pr.score != null ? " · " + esc(pr.reviewer || "review") + " " + pr.score + "/5" : "") + "</li>";
-    }).join("") + "</ul>";
-    var qs = (questionsByNode[b.node] || []);
-    if (qs.length) html += "<h4>Questions on " + b.node + "</h4><ul>" + qs.map(function (q) {
-      var Q = questions[q];
-      return "<li><code>" + q + "</code> " + esc(Q.text) + " — asked " + Q.asks + "×" + (Q.status === "answered" ? ", answered: " + esc(Q.answer) : "") + "</li>";
-    }).join("") + "</ul>";
-    if (b.reason) html += "<h4>Tabled</h4><div>" + esc(b.reason) + "</div>";
-    html += "<h4>Branch</h4><div>" + esc(b.kind) + ", " + esc(b.status) + (b.ts ? " · opened " + esc(String(b.ts).slice(0, 16).replace("T", " ")) : "") + "</div>";
-    d.innerHTML = html || "Nothing recorded yet.";
-    row.after(d);
-  }
+  // Stats -------------------------------------------------------------------------
+  var needN = openQ.length + openC.length + unrecorded.length;
+  var stats = [
+    { n: count.open, l: "open", cls: "" },
+    { n: needN, l: needN === 1 ? "needs you" : "need you", cls: needN ? "attn" : "" },
+    { n: count.resolved, l: "done", cls: count.resolved ? "good" : "" },
+    { n: Object.keys(records).filter(function (k) { return records[k].active; }).length, l: "decisions kept", cls: "" }
+  ];
+  if (count.tabled) stats[3] = { n: count.tabled, l: "parked", cls: "attn" };
+  document.getElementById("stats").innerHTML = stats.map(function (s) {
+    return '<div class="stat ' + s.cls + '"><b>' + s.n + "</b><span>" + s.l + "</span></div>";
+  }).join("");
 
-  // Needs you -----------------------------------------------------------------
-  var needs = document.getElementById("needs"), nItems = 0;
-  function need(head, sub, cmd) {
-    var row = el("div", "need");
-    row.innerHTML = '<div class="t">' + head + "</div>";
-    if (cmd) {
-      var b = el("button", "cmd", esc(cmd) + ' <span aria-hidden="true">⧉</span>');
-      b.type = "button"; b.title = "Copy"; b.dataset.cmd = cmd;
-      b.addEventListener("click", function () { copy(cmd, b); });
-      row.appendChild(b);
-    }
-    if (sub) row.appendChild(el("div", "sub", sub));
-    needs.appendChild(row); nItems++;
+  // Needs you ---------------------------------------------------------------------
+  var needs = document.getElementById("needs-pane");
+  if (needN) {
+    needs.appendChild(el("h2", null, "Needs you"));
+    needs.appendChild(el("div", "hint", "Copy a command and paste it into the chat. Commands starting with :: go to Creek, not to Claude."));
   }
-  openQ.sort(function (a, b) { return questions[b].asks - questions[a].asks || byNum(a, b); }).forEach(function (qid) {
+  openQ.forEach(function (qid) {
     var q = questions[qid];
-    need("<b>" + qid + "</b>" + esc(q.text), "asked " + q.asks + "×" + (q.node ? " · on " + q.node : ""), "::answer " + qid + " ");
+    var card = el("div", "need");
+    card.dataset.need = qid;
+    var on = q.node && nodes[q.node] ? "about " + esc(title(q.node)) : "";
+    var asked = q.asks > 1 ? "asked " + q.asks + " times" : "asked once";
+    card.innerHTML = '<div class="body"><div class="q">' + esc(q.text) + '</div><div class="sub">' + [asked, on].filter(Boolean).join(" · ") + ' · <span class="id">' + qid + '</span></div><div class="actions"></div></div>';
+    card.querySelector(".actions").appendChild(copyBtn("::answer " + qid + " ", "::answer " + qid + " <your answer>"));
+    needs.appendChild(card);
   });
-  openC.sort(byNum).forEach(function (cid) {
+  openC.forEach(function (cid) {
     var c = conflicts[cid];
-    need("<b>" + cid + "</b>" + esc(c.records.join(" vs ")) + " on " + esc((c.display_overlap || c.overlap).join(", ")), "keep both, or retire the older one with ::supersede " + cid, "::ok " + cid);
+    var card = el("div", "need conflict");
+    card.dataset.need = cid;
+    var quotes = c.records.map(function (rid) {
+      var r = records[rid] || {};
+      return '<div class="quote">' + esc(r.decision || rid) + ' <span class="muted">— ' + esc(title(r.node)) + ' <span class="id">' + rid + "</span></span></div>";
+    }).join("");
+    card.innerHTML = '<div class="body"><div class="q">Two decisions both change ' + esc((c.display_overlap || c.overlap).join(", ")) +
+      '</div><div class="sub">Check they agree. <span class="id">' + cid + "</span></div>" + quotes + '<div class="actions"></div></div>';
+    var a = card.querySelector(".actions");
+    a.appendChild(copyBtn("::ok " + cid, "::ok " + cid + "  (both stand)"));
+    a.appendChild(copyBtn("::supersede " + cid, "::supersede " + cid + "  (keep the newer)"));
+    needs.appendChild(card);
   });
-  nodeIds.forEach(function (nid) {
-    var n = nodes[nid];
-    if (n.status === "tabled") need("<b>" + nid + "</b>" + esc(n.title), "tabled" + (n.reason ? ": " + esc(n.reason) : ""), "::branch " + nid.slice(1));
+  unrecorded.forEach(function (nid) {
+    var card = el("div", "need");
+    card.dataset.need = nid;
+    card.innerHTML = '<div class="body"><div class="q">' + esc(title(nid)) + '</div><div class="sub">A PR was merged with nothing recorded. Reopen it and ask Claude what was decided. <span class="id">' + nid + '</span></div><div class="actions"></div></div>';
+    card.querySelector(".actions").appendChild(copyBtn("::branch " + nid.slice(1)));
+    needs.appendChild(card);
   });
-  nodeIds.forEach(function (nid) {
-    var n = nodes[nid];
-    if (n.unrecorded) need("<b>" + nid + "</b>" + esc(n.title), "a PR merged with no record; reopen it and ask Claude to resolve it", "::branch " + nid.slice(1));
-  });
-  document.getElementById("needs-count").textContent = nItems || "";
-  if (!nItems) needs.appendChild(el("div", "empty", "Nothing needs you."));
 
-  function copy(text, btn) {
-    function done() { btn.classList.add("copied"); setTimeout(function () { btn.classList.remove("copied"); }, 900); }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(done, fallback);
-    } else fallback();
-    function fallback() {
-      var ta = document.createElement("textarea"); ta.value = text; document.body.appendChild(ta); ta.select();
-      try { document.execCommand("copy"); done(); } catch (e) { /* ignore */ } ta.remove();
-    }
+  // Points ------------------------------------------------------------------------
+  var pointsPane = document.getElementById("points-pane");
+  document.getElementById("n-points").textContent = nodeIds.length;
+  if (!nodeIds.length) pointsPane.appendChild(el("div", "empty", "Nothing tracked yet. Send Claude a numbered list of what you want done and each item becomes a point here."));
+  // Newest-active open points first, then the rest in brief order.
+  var ordered = nodeIds.filter(function (k) { return nodes[k].status === "open"; })
+    .concat(nodeIds.filter(function (k) { return nodes[k].status === "tabled"; }))
+    .concat(nodeIds.filter(function (k) { return nodes[k].status === "resolved"; }))
+    .concat(nodeIds.filter(function (k) { return nodes[k].status === "abandoned"; }));
+  var frag = document.createDocumentFragment();
+  ordered.forEach(function (nid) {
+    var n = nodes[nid];
+    var recs = (n.records || []).filter(function (r) { return records[r]; });
+    var live = recs.filter(function (r) { return records[r].active; });
+    var latest = live.length ? records[live[live.length - 1]] : null;
+    var d = el("details", "point s-" + n.status);
+    d.dataset.node = nid; d.dataset.status = n.status;
+    var line;
+    if (n.status === "tabled") line = "<b>Parked</b>" + (n.reason ? ": " + esc(n.reason) : "");
+    else if (n.status === "abandoned") line = "<b>Dropped</b>" + (n.reason ? ": " + esc(n.reason) : "");
+    else if (latest) line = "<b>" + (n.status === "resolved" ? "Decided" : "Latest") + ":</b> " + esc(latest.decision);
+    else line = "Not started yet";
+    var tags = [];
+    var fileSet = [];
+    live.forEach(function (r) { files(records[r]).forEach(function (f) { if (fileSet.indexOf(f) < 0) fileSet.push(f); }); });
+    fileSet.slice(0, 4).forEach(function (f) { tags.push('<span class="tag file">' + esc(f) + "</span>"); });
+    if (fileSet.length > 4) tags.push('<span class="tag">+' + (fileSet.length - 4) + " files</span>");
+    openQ.forEach(function (q) { if (questions[q].node === nid) tags.push('<span class="tag warn">waiting on you</span>'); });
+    if (conflictsByNode[nid]) tags.push('<span class="tag bad">check conflict</span>');
+    if (n.unrecorded) tags.push('<span class="tag warn">unrecorded PR</span>');
+    if (live.length > 1) tags.push('<span class="tag">' + live.length + " decisions</span>");
+    d.innerHTML = '<summary><span class="dot" title="' + STATUS[n.status] + '"></span><span class="title">' + esc(n.title) +
+      '</span><span class="id">' + nid + '</span><div class="latest">' + line + "</div>" +
+      (tags.length ? '<div class="tags">' + tags.join("") + "</div>" : "") + "</summary>";
+    d.addEventListener("toggle", function () { if (d.open && !d.dataset.built) { build(d, nid); d.dataset.built = "1"; } });
+    frag.appendChild(d);
+  });
+  pointsPane.appendChild(frag);
+
+  // A point's history is built only when it is opened, so big ledgers stay fast.
+  function build(d, nid) {
+    var n = nodes[nid];
+    var box = el("div", "detail");
+    var recs = (n.records || []).filter(function (r) { return records[r]; }).slice().reverse();
+    if (!recs.length) box.appendChild(el("div", "muted", "No decisions recorded yet."));
+    recs.forEach(function (rid) {
+      var r = records[rid];
+      var s = el("div", "step" + (r.active ? "" : " old"));
+      var meta = ['<span class="id">' + rid + "</span>"];
+      if (files(r).length) meta.push(esc(files(r).join(", ")));
+      if (r.prs && r.prs.length) meta.push(r.prs.map(function (p) { var pr = prs[String(p)] || {}; return "PR #" + p + (pr.action ? " " + esc(pr.action) : "") + (pr.score != null ? " · " + pr.score + "/5" : ""); }).join(", "));
+      if (r.question) meta.push("your answer to " + esc(r.question));
+      if (!r.active) meta.push("replaced by " + esc(r.superseded_by || "a later decision"));
+      if (r.ts) meta.push(esc(when(r.ts)));
+      s.innerHTML = '<div class="what">' + esc(r.decision) + "</div>" +
+        (r.rule ? '<div class="rule"><em>Keep in mind:</em> ' + esc(r.rule) + "</div>" : "") +
+        '<div class="meta">' + meta.join(" · ") + "</div>";
+      box.appendChild(s);
+    });
+    var edits = Object.keys(n.edits || {});
+    if (edits.length) box.appendChild(el("div", "more", "Files edited: " + edits.map(function (f) { return '<span class="mono">' + esc(f) + "</span>" + (n.edits[f] > 1 ? " ×" + n.edits[f] : ""); }).join(", ")));
+    var qs = Object.keys(questions).filter(function (q) { return questions[q].node === nid; });
+    qs.forEach(function (q) {
+      var Q = questions[q];
+      box.appendChild(el("div", "more", "Question: " + esc(Q.text) + (Q.status === "answered" ? " — you said <b>" + esc(Q.answer) + "</b>" : " — waiting on you")));
+    });
+    var br = (n.branches || []).filter(function (b) { return branches[b] && branches[b].status === "open"; });
+    if (br.length) box.appendChild(el("div", "more", "Being worked on in " + br.map(function (b) { return branches[b].kind === "fork" ? "a forked session (" + b + ")" : "this session (" + b + ")"; }).join(", ")));
+    var actions = el("div", "actions");
+    if (n.status === "open") { actions.appendChild(copyBtn("::table " + nid.slice(1) + " ", "::table " + nid.slice(1) + " <why>")); }
+    if (n.status !== "open") actions.appendChild(copyBtn("::branch " + nid.slice(1), "::branch " + nid.slice(1) + "  (reopen)"));
+    box.appendChild(actions);
+    d.appendChild(box);
   }
 
-  // Ledger --------------------------------------------------------------------
-  var tbody = document.getElementById("ledger");
+  // Filters -------------------------------------------------------------------------
+  var filterBtns = Array.prototype.slice.call(document.querySelectorAll("#filters .chip-btn"));
+  filterBtns.forEach(function (b) {
+    b.addEventListener("click", function () {
+      filterBtns.forEach(function (x) { x.setAttribute("aria-pressed", String(x === b)); });
+      var f = b.dataset.f;
+      Array.prototype.forEach.call(pointsPane.querySelectorAll(".point"), function (p) {
+        var st = p.dataset.status;
+        var show = f === "all" || (f === "open" ? st === "open" || st === "tabled" : st === f);
+        p.classList.toggle("hidden", !show);
+      });
+    });
+  });
+
+  // Decisions ---------------------------------------------------------------------
+  var decBox = document.getElementById("decisions");
   var recIds = Object.keys(records).sort(byNum).reverse();
+  document.getElementById("n-decisions").textContent = recIds.filter(function (r) { return records[r].active; }).length;
   var rows = recIds.map(function (rid) {
     var r = records[rid];
-    var tr = el("tr", r.active ? "" : "inactive");
-    var prList = (r.prs || []).map(function (p) { return "#" + p; }).join(" ");
-    tr.innerHTML = '<td class="id">' + rid + '</td><td class="id">' + esc(r.node) + '</td><td class="dec">' + esc(r.decision) + '</td><td class="rule">' + esc(r.rule || "") +
-      '</td><td class="files">' + esc((r.affects || []).join(", ")) + '</td><td class="id">' + esc(r.superseded_by || "") + '</td><td class="id">' + esc(prList) + "</td>";
-    var hay = [rid, r.node, r.decision, r.rule, (r.affects || []).join(" "), (r.tags || []).join(" "), (r.terms || []).join(" ")].join(" ").toLowerCase();
-    return { tr: tr, rec: r, hay: hay };
+    var row = el("div", "dec" + (r.active ? "" : " old"));
+    row.dataset.rec = rid;
+    var meta = ['<span class="id">' + rid + "</span>", esc(title(r.node))];
+    if (files(r).length) meta.push('<span class="mono">' + esc(files(r).join(", ")) + "</span>");
+    if (!r.active) meta.push("replaced by " + esc(r.superseded_by || "?"));
+    row.innerHTML = '<div class="what">' + esc(r.decision) + "</div>" +
+      (r.rule ? '<div class="rule"><em>Keep in mind:</em> ' + esc(r.rule) + "</div>" : "") +
+      '<div class="meta">' + meta.join(" · ") + "</div>";
+    decBox.appendChild(row);
+    var hay = [rid, r.node, title(r.node), r.decision, r.rule, (r.affects || []).join(" "), (r.tags || []).join(" ")].join(" ").toLowerCase();
+    return { row: row, rec: r, hay: hay };
   });
-  rows.forEach(function (x) { tbody.appendChild(x.tr); });
-
-  var search = document.getElementById("search"), showInactive = document.getElementById("show-inactive");
-  function matches(x, q) {
-    if (!q) return true;
-    return q.split(/\s+/).every(function (w) { return x.hay.indexOf(w) >= 0; });
-  }
-  function filter() {
-    var q = search.value.trim().toLowerCase(), shown = 0;
+  if (!rows.length) decBox.appendChild(el("div", "empty", "No decisions yet. Claude records one each time something is settled."));
+  var search = document.getElementById("search");
+  function filterDecisions() {
+    var q = search.value.trim().toLowerCase(), shown = [];
     rows.forEach(function (x) {
-      var on = (x.rec.active || showInactive.checked) && matches(x, q);
-      x.tr.classList.toggle("hidden", !on);
-      if (on) shown++;
+      // Replaced decisions stay in their point's history, not in this list.
+      var on = x.rec.active && (!q || q.split(/\s+/).every(function (w) { return x.hay.indexOf(w) >= 0; }));
+      x.row.classList.toggle("hidden", !on);
+      if (on) shown.push(x.row.dataset.rec);
     });
-    document.getElementById("ledger-count").textContent = shown + (q ? " match" + (shown === 1 ? "" : "es") : " active");
-    document.getElementById("ledger-empty").classList.toggle("hidden", shown > 0);
-    document.body.dataset.matches = rows.filter(function (x) { return !x.tr.classList.contains("hidden"); }).map(function (x) { return x.tr.firstChild.textContent; }).join(" ");
+    document.getElementById("dec-empty").classList.toggle("hidden", shown.length > 0 || !rows.length);
+    document.body.dataset.matches = shown.join(" ");
   }
-  search.addEventListener("input", function () {
-    filter();
-    try { history.replaceState(null, "", search.value ? "#q=" + encodeURIComponent(search.value) : "#"); } catch (e) { /* file: urls */ }
-  });
-  showInactive.addEventListener("change", filter);
+  search.addEventListener("input", filterDecisions);
+
+  // Tabs ----------------------------------------------------------------------------
+  var tabs = { points: document.getElementById("tab-points"), decisions: document.getElementById("tab-decisions") };
+  function show(which) {
+    tabs.points.setAttribute("aria-selected", String(which === "points"));
+    tabs.decisions.setAttribute("aria-selected", String(which === "decisions"));
+    document.getElementById("points-pane").classList.toggle("hidden", which !== "points");
+    document.getElementById("decisions-pane").classList.toggle("hidden", which !== "decisions");
+    document.getElementById("filters").classList.toggle("hidden", which !== "points");
+  }
+  tabs.points.addEventListener("click", function () { show("points"); });
+  tabs.decisions.addEventListener("click", function () { show("decisions"); search.focus(); });
+
   var h = /[#&]q=([^&]*)/.exec(location.hash);
-  if (h) search.value = decodeURIComponent(h[1]);
-  filter();
+  if (h) { search.value = decodeURIComponent(h[1]); show("decisions"); }
+  filterDecisions();
 
   var ms = performance.now() - t0;
   document.body.dataset.renderMs = ms.toFixed(1);
-  // Time from navigation start to a rendered page, for creek's own tests.
   document.body.dataset.loadMs = performance.now().toFixed(1);
-  document.getElementById("foot").textContent = "Generated " + DATA.generated.replace("T", " ").replace("+00:00", " UTC") +
-    " by creek map · " + recIds.length + " records · rendered in " + ms.toFixed(0) + " ms";
+  document.getElementById("foot").textContent = "Updated " + when(DATA.generated) + " UTC · type ::map in the chat to refresh";
 })();
 </script>
 </body>

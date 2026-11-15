@@ -11,7 +11,7 @@
       "name": "creek",
       "source": "./plugin",
       "description": "Branch-and-merge decision tracking for long Claude Code sessions",
-      "version": "1.0.1",
+      "version": "1.0.2",
       "homepage": "https://github.com/arnavpopley/creek",
       "author": {
         "name": "Arnav Popley"
