@@ -120,6 +120,44 @@ def cmd_map(args) -> int:
     return mapview.run(open_after=args.open)
 
 
+def cmd_replay(args) -> int:
+    import tempfile
+    from pathlib import Path
+
+    from . import paths, replay
+
+    fixture = replay.load(args.fixture)
+    ann = replay.load(args.annotations) if args.annotations else None
+    if args.into:
+        root = Path(args.into).resolve()
+        root.mkdir(parents=True, exist_ok=True)
+    else:
+        root = Path(tempfile.mkdtemp(prefix="creek-replay-"))
+    cdir = paths.creek_dir(root)
+    if paths.events_path(cdir).exists():
+        print(f"creek replay: {cdir} already has a ledger; replay needs a fresh one.", file=sys.stderr)
+        return 1
+    rep = replay.run(fixture, cdir, ann, use_markers=not args.decisions_only)
+    if args.json:
+        print(json.dumps(rep, indent=2, ensure_ascii=False))
+    else:
+        print(f"Replayed {args.fixture} into {cdir}\n")
+        print(replay.format_report(rep))
+    return 0
+
+
+def cmd_cost(args) -> int:
+    from . import cost
+
+    return cost.run(session=args.session, as_json=args.json)
+
+
+def cmd_sync(args) -> int:
+    from . import sync
+
+    return sync.run(reviews=not args.no_reviews)
+
+
 def cmd_install(args) -> int:
     from . import install
 
@@ -156,6 +194,23 @@ def _main(argv: list[str]) -> int:
     m = sub.add_parser("map", help="write .creek/map.html")
     m.add_argument("--open", action="store_true", help="open it in the browser")
     m.set_defaults(fn=cmd_map)
+
+    y = sub.add_parser("sync", help="pull PR state (and review scores) from gh into the ledger")
+    y.add_argument("--no-reviews", action="store_true", help="skip looking up review scores")
+    y.set_defaults(fn=cmd_sync)
+
+    c = sub.add_parser("cost", help="what Creek injected, per hook, against transcript token usage")
+    c.add_argument("--session", help="only this session id")
+    c.add_argument("--json", action="store_true")
+    c.set_defaults(fn=cmd_cost)
+
+    r = sub.add_parser("replay", help="load a session reconstruction JSON into a fresh ledger (testing)")
+    r.add_argument("fixture")
+    r.add_argument("--annotations", help="markers and probe edits to replay with (see tests/fixtures)")
+    r.add_argument("--decisions-only", action="store_true", help="ignore annotated rules/tags: the baseline")
+    r.add_argument("--into", metavar="DIR", help="project dir for the new ledger (default: a temp dir)")
+    r.add_argument("--json", action="store_true", help="print the full report as JSON")
+    r.set_defaults(fn=cmd_replay)
 
     i = sub.add_parser("install", help="set up the status line and check the plugin is enabled")
     i.add_argument("--dry-run", action="store_true", help="show the settings change without writing it")
