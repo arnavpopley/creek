@@ -60,7 +60,7 @@ Prompts starting with `::` are handled by Creek and never reach Claude (zero tok
 | command | does |
 |---|---|
 | `::status` | open nodes, questions, conflicts, open branches |
-| `::map` | the board: inline in the chat when you're in Orca, otherwise `.creek/map.html` |
+| `::map` | the board, with a git-style graph of your prompts, branches and merges: inline in the chat in Orca, otherwise `.creek/map.html` |
 | `::answer q1 o` | answers a question, records it, tells Claude on your next message |
 | `::branch 13` | opens an inline branch on n13 |
 | `::merge` | closes the current branch with its latest record |
