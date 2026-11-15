@@ -1,0 +1,569 @@
+{
+  "visibility": "partial: reconstructed from the part of the session after a compaction. Message numbers 1-16 count only the user's typed messages in that part; 16 is the request for this reconstruction. first_msg 0 means the point came from before message 1 (the original brief, known only from the compaction summary).",
+  "nodes": [
+    {
+      "id": "1",
+      "title": "Help panel opened with ? / [?], plus an [h] hint near ap9",
+      "origin": "my brief",
+      "first_msg": 0,
+      "status": "resolved",
+      "times_revisited": 0,
+      "uncertain": true
+    },
+    {
+      "id": "2",
+      "title": "Ticker tiles open their stats row; pause on hover/hold; mobile scroll (background agent)",
+      "origin": "my brief",
+      "first_msg": 0,
+      "status": "resolved",
+      "times_revisited": 0,
+      "uncertain": true
+    },
+    {
+      "id": "3",
+      "title": "Rename the views to one-syllable words (me/stats/builds/work/more/talk)",
+      "origin": "my brief",
+      "first_msg": 1,
+      "status": "resolved",
+      "times_revisited": 1
+    },
+    {
+      "id": "4",
+      "title": "Landing-page typing animation (name, then each line)",
+      "origin": "my brief",
+      "first_msg": 2,
+      "status": "resolved",
+      "times_revisited": 1
+    },
+    {
+      "id": "5",
+      "title": "About-line wording on the landing page",
+      "origin": "my brief",
+      "first_msg": 2,
+      "status": "resolved",
+      "times_revisited": 2
+    },
+    {
+      "id": "6",
+      "title": "Bullet style for the landing lines",
+      "origin": "my brief",
+      "first_msg": 7,
+      "status": "resolved",
+      "times_revisited": 2
+    },
+    {
+      "id": "7",
+      "title": "Intro line under $ numbers / $ stats",
+      "origin": "my brief",
+      "first_msg": 3,
+      "status": "resolved",
+      "times_revisited": 1
+    },
+    {
+      "id": "8",
+      "title": "$LIFE tick colour shown in the ticker",
+      "origin": "my brief",
+      "first_msg": 3,
+      "status": "resolved",
+      "times_revisited": 1
+    },
+    {
+      "id": "9",
+      "title": "Custom mouse pointer",
+      "origin": "my brief",
+      "first_msg": 4,
+      "status": "open",
+      "times_revisited": 5,
+      "uncertain": true
+    },
+    {
+      "id": "10",
+      "title": "Daylight clock accuracy check",
+      "origin": "my brief",
+      "first_msg": 5,
+      "status": "resolved",
+      "times_revisited": 0
+    },
+    {
+      "id": "11",
+      "title": "Keyboard shortcuts for the contact links",
+      "origin": "my brief",
+      "first_msg": 6,
+      "status": "resolved",
+      "times_revisited": 2
+    },
+    {
+      "id": "12",
+      "title": "List of questions and decisions for you",
+      "origin": "my brief",
+      "first_msg": 7,
+      "status": "resolved",
+      "times_revisited": 1
+    },
+    {
+      "id": "13",
+      "title": "Language-learning byline on the $DUO row",
+      "origin": "my brief",
+      "first_msg": 8,
+      "status": "resolved",
+      "times_revisited": 2
+    },
+    {
+      "id": "14",
+      "title": "Better bylines for the stats rows",
+      "origin": "my brief",
+      "first_msg": 8,
+      "status": "open",
+      "times_revisited": 1
+    },
+    {
+      "id": "15",
+      "title": "Merge everything at Greptile 5/5",
+      "origin": "my brief",
+      "first_msg": 9,
+      "status": "resolved",
+      "times_revisited": 0
+    },
+    {
+      "id": "16",
+      "title": "Two engineering entries (year 1 design project, a paper)",
+      "origin": "my brief",
+      "first_msg": 14,
+      "status": "resolved",
+      "times_revisited": 0,
+      "uncertain": true
+    },
+    {
+      "id": "17",
+      "title": "Content for the Extras / More page",
+      "origin": "my brief",
+      "first_msg": 0,
+      "status": "open",
+      "times_revisited": 1,
+      "uncertain": true
+    },
+    {
+      "id": "18",
+      "title": "Which key 'more' uses (m was taken by 'me')",
+      "origin": "arose mid-conversation",
+      "first_msg": 9,
+      "status": "open",
+      "times_revisited": 0
+    },
+    {
+      "id": "19",
+      "title": "React hydration errors on the live site",
+      "origin": "arose mid-conversation",
+      "first_msg": 8,
+      "status": "resolved",
+      "times_revisited": 0
+    }
+  ],
+  "branches": [
+    {
+      "id": "b1",
+      "node": "1",
+      "trigger": "The new '[?] help' nav link truncated the prompt path at 1024 and 1280 px",
+      "start_msg": 0,
+      "end_msg": 0,
+      "settling_msg": 0,
+      "resolution": "Shortened the link to '[?]' and tightened the nav gap at lg from gap-5 to gap-4",
+      "affects": [
+        "src/components/Header.tsx",
+        "header width check across 7 views × 6 widths"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b2",
+      "node": "1",
+      "trigger": "Greptile 4/5: focus could leave the panel, and the panel overflowed short screens",
+      "start_msg": 0,
+      "end_msg": 0,
+      "settling_msg": 0,
+      "resolution": "Rebuilt the panel as a native <dialog> opened with showModal(), with a capped height and its own scroll",
+      "affects": [
+        "src/components/HelpPanel.tsx",
+        "PR #30"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b3",
+      "node": "4",
+      "trigger": "In dev, React StrictMode ran the effect twice, so the first run's 'seen' mark skipped the animation",
+      "start_msg": 2,
+      "end_msg": 2,
+      "settling_msg": 9,
+      "resolution": "Mark the animation as seen only once it has typed to the end",
+      "affects": [
+        "src/components/Hero.tsx",
+        "sessionStorage 'hero-typed'",
+        "PR #31"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b4",
+      "node": "5",
+      "trigger": "You wanted no full stops and more space between the lines",
+      "start_msg": 7,
+      "end_msg": 7,
+      "settling_msg": 9,
+      "resolution": "Dropped the full stops and spaced the lines out; screen readers get a list; the meta description adds the full stops back",
+      "affects": [
+        "src/config/site.ts profile.about",
+        "src/components/Hero.tsx",
+        "src/app/layout.tsx description",
+        "PR #31"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b5",
+      "node": "11",
+      "trigger": "Greptile 4/5: number keys opened links behind the help panel, and held keys repeated",
+      "start_msg": 6,
+      "end_msg": 6,
+      "settling_msg": 9,
+      "resolution": "Ignore key repeats and keys pressed while a dialog is open",
+      "affects": [
+        "src/components/ContactList.tsx",
+        "PR #34"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b6",
+      "node": "11",
+      "trigger": "You wanted letter keys (e for email…), but e already meant Experience",
+      "start_msg": 7,
+      "end_msg": 7,
+      "settling_msg": 9,
+      "resolution": "Contact links listen first and mark their keys as handled; the header skips handled keys",
+      "affects": [
+        "src/components/ContactIcons.tsx key field",
+        "src/components/ContactList.tsx",
+        "src/components/Header.tsx e.defaultPrevented",
+        "node 3"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b7",
+      "node": "11",
+      "trigger": "Greptile: with help open or the key held, e skipped b5's guard and went to Experience",
+      "start_msg": 7,
+      "end_msg": 7,
+      "settling_msg": 9,
+      "resolution": "Always claim a matched contact key, then skip the action if repeated or help is open",
+      "affects": [
+        "src/components/ContactList.tsx"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b8",
+      "node": "11",
+      "trigger": "The help panel's 'e l g i y' row was cramped",
+      "start_msg": 7,
+      "end_msg": 7,
+      "settling_msg": 9,
+      "resolution": "Grouped the help panel under # anywhere / # on projects / # on contact, one key per line",
+      "affects": [
+        "src/components/HelpPanel.tsx",
+        "node 1"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b9",
+      "node": "8",
+      "trigger": "You asked why the ticker wasn't updating or showing green",
+      "start_msg": 8,
+      "end_msg": 8,
+      "settling_msg": 9,
+      "resolution": "Ticker digits now flash green as they tick (shared with the stats bars), added to the then-unmerged PR #33",
+      "affects": [
+        "src/components/LifeCount.tsx useDigitFlash",
+        "src/components/LifeGraphs.tsx",
+        "src/components/TickerStrip.tsx",
+        "PR #33"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b10",
+      "node": "19",
+      "trigger": "The daylight clock's coordinates came out slightly different on server and browser, causing a hydration warning",
+      "start_msg": 8,
+      "end_msg": 8,
+      "settling_msg": 9,
+      "resolution": "Rounded the dial coordinates to 3 decimal places",
+      "affects": [
+        "src/components/DaylightClock.tsx",
+        "PR #36"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b11",
+      "node": "19",
+      "trigger": "React error #418 on the live landing page only; couldn't reproduce it",
+      "start_msg": 8,
+      "end_msg": 9,
+      "settling_msg": 9,
+      "resolution": "Left it to recheck; it was gone after the new landing page (#31) merged; cause never found",
+      "affects": [
+        "production /"
+      ],
+      "uncertain": true
+    },
+    {
+      "id": "b12",
+      "node": "13",
+      "trigger": "The byline wording needed two rounds of correction",
+      "start_msg": 9,
+      "end_msg": 12,
+      "settling_msg": 12,
+      "resolution": "Reworded the byline twice to the final phrase, marked up with its language (lang attribute)",
+      "affects": [
+        "src/lib/stats/duolingo.ts STUDYING",
+        "src/lib/stats/types.ts bylineLang",
+        "src/components/LiveStats.tsx",
+        "PRs #35, #41"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b13",
+      "node": "3",
+      "trigger": "'more' and 'me' both start with m",
+      "start_msg": 9,
+      "end_msg": 9,
+      "settling_msg": null,
+      "resolution": "Gave 'more' the key o for now and kept asking you; never answered",
+      "affects": [
+        "src/config/site.ts nav",
+        "node 18"
+      ],
+      "uncertain": true
+    },
+    {
+      "id": "b14",
+      "node": "3",
+      "trigger": "A /projects/:flavour redirect would also catch /projects/*.webp images",
+      "start_msg": 9,
+      "end_msg": 9,
+      "settling_msg": 9,
+      "resolution": "Only redirect the four flavour names",
+      "affects": [
+        "next.config.ts",
+        "public/projects/project-landing.webp",
+        "PR #37"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b15",
+      "node": "7",
+      "trigger": "'favourite tracked metrics' needed rewording",
+      "start_msg": 10,
+      "end_msg": 10,
+      "settling_msg": 10,
+      "resolution": "'…some of my favourite metrics, tracked live.'",
+      "affects": [
+        "src/config/site.ts statsIntro",
+        "PR #39"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b16",
+      "node": "6",
+      "trigger": "You asked for // but also bash-comment syntax",
+      "start_msg": 11,
+      "end_msg": 11,
+      "settling_msg": null,
+      "resolution": "Used # (bash's comment marker) and said so; you never confirmed",
+      "affects": [
+        "src/components/Hero.tsx",
+        "PR #40"
+      ],
+      "uncertain": true
+    },
+    {
+      "id": "b17",
+      "node": "9",
+      "trigger": "Candle trails were too messy",
+      "start_msg": 12,
+      "end_msg": 12,
+      "settling_msg": 13,
+      "resolution": "Dropped the candle modes; built CAD crosshair variants with OHLC readings",
+      "affects": [
+        "src/components/demo/DemoCursor.tsx",
+        "PR #38"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b18",
+      "node": "9",
+      "trigger": "TradingView-style rebuild: tags overlapping in the corner, huge %, then Greptile 4/5 (scroll, narrow windows, rebuilding every frame)",
+      "start_msg": 13,
+      "end_msg": 13,
+      "settling_msg": 15,
+      "resolution": "Clamped the tags, used a 100–200 price scale, re-read the target on scroll, wrapped the readout, cached text",
+      "affects": [
+        "src/components/Crosshair.tsx",
+        "src/components/Sparkline.tsx data-series",
+        "src/app/globals.css",
+        "PR #42"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b19",
+      "node": "9",
+      "trigger": "Too big; it hid the real information",
+      "start_msg": 15,
+      "end_msg": 15,
+      "settling_msg": 15,
+      "resolution": "Tabled: PR #42 converted to a draft, plus a memory note",
+      "affects": [
+        "PR #42",
+        "memory/crosshair-pointer-tabled.md"
+      ],
+      "uncertain": false
+    },
+    {
+      "id": "b20",
+      "node": "16",
+      "trigger": "No public source had the details of either entry",
+      "start_msg": 14,
+      "end_msg": 14,
+      "settling_msg": null,
+      "resolution": "Wrote both entries from documents you provided; which project counts as year 1 is still unconfirmed",
+      "affects": [
+        "$PROJ1",
+        "$PROJ2",
+        "src/config/site.ts"
+      ],
+      "uncertain": true
+    },
+    {
+      "id": "b21",
+      "node": "16",
+      "trigger": "Entries without a repo rendered as the big website card with a 'site up' check",
+      "start_msg": 14,
+      "end_msg": 14,
+      "settling_msg": 14,
+      "resolution": "New optional 'when' field; only entries with a website get the big card",
+      "affects": [
+        "src/config/site.ts Security.when",
+        "src/components/QuoteBoard.tsx",
+        "src/app/builds/[flavour]/page.tsx",
+        "PR #43"
+      ],
+      "uncertain": false
+    }
+  ],
+  "conflicts": [
+    {
+      "branches": [
+        "b5",
+        "b7"
+      ],
+      "what": "b5's early return happened before the key was marked handled, so once b6 made e a contact key, it fell through to Experience; b7 had to reorder it"
+    },
+    {
+      "branches": [
+        "b6"
+      ],
+      "what": "The node 3 rename (experience → work) removed the e clash that b6's capture-phase override was built for; the override stayed as a general guard with rewritten comments"
+    },
+    {
+      "branches": [
+        "b4"
+      ],
+      "what": "Undid the full stops in the msg-2 wording (node 5), so the meta description had to add them back with a '. ' join"
+    },
+    {
+      "branches": [
+        "b12"
+      ],
+      "what": "Each of the two byline rewrites undid the byline merged just before it (#35, then #41)"
+    },
+    {
+      "branches": [
+        "b15"
+      ],
+      "what": "Undid the 'most-watched' wording that #32 had already merged"
+    },
+    {
+      "branches": [
+        "b17",
+        "b18",
+        "b19"
+      ],
+      "what": "b17 threw out the candle modes built in response to msg 11; b19 then shelved everything b18 had built and fixed"
+    },
+    {
+      "branches": [
+        "b16"
+      ],
+      "what": "Went against the literal '//' in msg 11; unclear whether that matches what you meant",
+      "uncertain": true
+    }
+  ],
+  "lost_detail": [
+    {
+      "branch": "b2",
+      "later_msg": 13,
+      "detail": "Because the help panel lives in the browser's top layer, the crosshair had to detect an open modal and hand back the system pointer, or the pointer would vanish under the panel"
+    },
+    {
+      "branch": "b5",
+      "later_msg": 7,
+      "detail": "The guard returned before marking the key as handled; harmless with number keys, but it caused b7 once e became a contact key"
+    },
+    {
+      "branch": "b6",
+      "later_msg": 9,
+      "detail": "The header now skips any key a page has already handled, so Talk's letters still win after the rename"
+    },
+    {
+      "branch": "b3",
+      "later_msg": 9,
+      "detail": "The animation plays once per tab (sessionStorage 'hero-typed', set only on completion), so the demo needed a [replay typing] button to clear it"
+    },
+    {
+      "branch": "b9",
+      "later_msg": 9,
+      "detail": "Diagnosis: the ticker was updating (60 s poll, mostly daily data); the green existed only on unmerged #33, so it appeared live only after the msg-9 merge"
+    },
+    {
+      "branch": "b11",
+      "later_msg": 9,
+      "detail": "The plan was to recheck the live site after #31 merged; it came back clean and the cause was never found"
+    },
+    {
+      "branch": "b13",
+      "later_msg": 15,
+      "detail": "The key for 'more' was listed as an open question in every reply from msg 9 to msg 15 and never answered"
+    },
+    {
+      "branch": "b20",
+      "later_msg": 15,
+      "detail": "Treating one specific design project as the year 1 project, and the missing paper link, were flagged for you to check; still unconfirmed"
+    }
+  ],
+  "stats": {
+    "total_msgs": 16,
+    "msgs_on_main_progress": 8,
+    "msgs_on_fixes": 7,
+    "note": "Main: 1, 2, 3, 4, 6, 9, 11, 14. Fixes: 5, 7, 8, 10, 12, 13, 15. Message 16 is this request. Messages 7 and 8 mixed a fix with new asks; I counted both as fixes.",
+    "uncertain": true
+  },
+  "scrubbed": "Personal details replaced for the public repo; file names, structure and decisions are unchanged."
+}
