@@ -58,8 +58,9 @@ def render_status(state: dict, session: str | None = None) -> str:
     )
     conflicts = [(k, c) for k, c in state["conflicts"].items() if c["status"] == "open"]
     unrecorded = [(k, n) for k, n in nodes.items() if n.get("unrecorded")]
+    branches = [(k, b) for k, b in state["branches"].items() if b["status"] == "open"]
 
-    if not (open_nodes or tabled or questions or conflicts or unrecorded):
+    if not (open_nodes or tabled or questions or conflicts or unrecorded or branches):
         resolved = sum(1 for n in nodes.values() if n["status"] == "resolved")
         return f"creek · clear ({resolved} resolved, {len(state['records'])} records)"
 
@@ -83,6 +84,11 @@ def render_status(state: dict, session: str | None = None) -> str:
         for k, c in conflicts:
             a, b = c["records"][:2]
             lines.append(f"  {k:<5} {a} ↔ {b} on {', '.join(c['overlap'])}   → ::ok {k}  or  ::supersede {k}")
+    if branches:
+        lines.append(f"Open branches ({len(branches)}):")
+        for k, b in branches:
+            where = "fork" + ("" if b.get("session") else ", not started") if b["kind"] == "fork" else "inline"
+            lines.append(f"  {k:<5} on {b['node']} ({where})   → ::merge in it, or ::table {b['node'][1:]} <reason>")
     if unrecorded:
         lines.append(f"Unrecorded ({len(unrecorded)}):")
         for k, n in unrecorded:
@@ -100,6 +106,12 @@ def cmd_status(args) -> int:
     cdir = paths.creek_dir()
     print(render_status(ledger.load_state(cdir)))
     return 0
+
+
+def cmd_fork(args) -> int:
+    from . import fork
+
+    return fork.run(args.node, session=args.session, print_only=args.print)
 
 
 def cmd_install(args) -> int:
@@ -128,6 +140,12 @@ def _main(argv: list[str]) -> int:
     d = sub.add_parser("doctor", help="hook latency, ledger integrity, PATH check")
     d.add_argument("--quick", action="store_true", help="skip the latency benchmark")
     d.set_defaults(fn=cmd_doctor)
+
+    f = sub.add_parser("fork", help="open a forked branch on a node in a second Claude session")
+    f.add_argument("node", help="node id (9 or n9) or exact title")
+    f.add_argument("--session", help="session to fork (default: the most recently active one)")
+    f.add_argument("--print", action="store_true", help="print the command instead of starting claude")
+    f.set_defaults(fn=cmd_fork)
 
     i = sub.add_parser("install", help="set up the status line and check the plugin is enabled")
     i.add_argument("--dry-run", action="store_true", help="show the settings change without writing it")
