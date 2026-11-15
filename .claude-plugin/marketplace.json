@@ -1,0 +1,21 @@
+{
+  "name": "creek",
+  "owner": {
+    "name": "Arnav Popley"
+  },
+  "metadata": {
+    "description": "Creek: branch-and-merge decision tracking for long Claude Code sessions"
+  },
+  "plugins": [
+    {
+      "name": "creek",
+      "source": "./plugin",
+      "description": "Branch-and-merge decision tracking for long Claude Code sessions",
+      "version": "1.0.0",
+      "homepage": "https://github.com/arnavpopley/creek",
+      "author": {
+        "name": "Arnav Popley"
+      }
+    }
+  ]
+}
