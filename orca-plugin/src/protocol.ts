@@ -24,9 +24,9 @@ export type Subs = {
 declare module 'orca' {
   interface PluginRequests {
     /** The sub-chats of the focused workspace, or why there are none. */
-    'subs.get': { output: { data: Subs | null; error?: string } }
+    'subs.get': { input: { root?: string | null }; output: { data: Subs | null; projects: { path: string; label: string }[]; error?: string } }
     /** Starts one turn in a point's sub-chat; the answer arrives as subs.changed. */
-    'subs.send': { input: { node: string; text: string }; output: { started: boolean; error?: string } }
+    'subs.send': { input: { node: string; text: string; root: string }; output: { started: boolean; error?: string } }
   }
   interface PluginPanelEvents {
     /** The ledger changed (a sub-chat replied, or the main chat moved on). */
