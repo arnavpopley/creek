@@ -21,6 +21,9 @@ html.dark{--ck-1:#60a5fa;--ck-2:#4ade80;--ck-3:#fbbf24;--ck-4:#c084fc;--ck-5:#f4
 *{box-sizing:border-box}
 body{margin:0;background:var(--background,#fff);color:var(--foreground,#171717);font:14px/1.45 var(--font-sans,system-ui,-apple-system,sans-serif)}
 .wrap{max-width:820px;padding:4px 2px 6px}
+.bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:12.5px;color:var(--muted-foreground,#737373);margin:0 0 10px}
+.bar b{color:var(--foreground,#171717);font-weight:600}
+.bar .k{font-family:var(--font-mono,ui-monospace,Menlo,monospace);font-size:11.5px;padding:0 6px;border-radius:5px;background:var(--secondary,#f2f2f2);color:var(--secondary-foreground,#171717)}
 .stage{display:grid;grid-template-columns:200px 56px minmax(0,1fr);align-items:start}
 .brief{border:1px solid var(--border,#e5e5e5);background:var(--secondary,#f4f4f4);color:var(--secondary-foreground,#171717);border-radius:12px 12px 12px 4px;padding:9px 11px;font-size:12.5px;white-space:pre-wrap;overflow-wrap:anywhere}
 .brief .who{font-size:10.5px;color:var(--muted-foreground,#737373);margin-bottom:2px}
@@ -53,6 +56,10 @@ _SCRIPT = """
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
   function col(n){return 'var(--ck-'+(((n-1)%5)+1)+')'}
   document.getElementById('brief').innerHTML='<div class="who">You</div>'+esc(D.brief||'Your brief');
+  var bar=document.getElementById('bar');
+  if(D.talking){bar.innerHTML='Talking to <b>'+D.talking.num+' · '+esc(D.talking.title)+'</b>. Plain messages go here. <span class="k">0:</span> everyone · <span class="k">N:</span> switch';}
+  else if(D.cards.some(function(c){return !c.settling})){bar.innerHTML='Type <span class="k">2: …</span> to talk to one point. It stays with that point until you switch or it settles.';}
+  else{bar.innerHTML='<b>All points settled.</b>';}
   var subs=document.getElementById('subs'), done=document.getElementById('done');
   D.cards.forEach(function(c){
     var el=document.createElement('div'); el.className='sub'+(c.focus?' focus':''); el.id='s'+c.node; el.style.setProperty('--c',col(c.num));
@@ -61,7 +68,6 @@ _SCRIPT = """
     if(!c.thread.length && c.latest) h+='<div class="latest">Latest: '+esc(c.latest)+'</div>';
     c.thread.forEach(function(m){h+='<div class="m '+(m.who==='you'?'u':'c')+'">'+(m.who==='you'?'You: ':'Claude: ')+esc(m.text)+'</div>'});
     if(c.waiting) h+='<div class="ask"><b>Claude asks:</b> '+esc(c.waiting)+'</div>';
-    if(!c.settling) h+='<div class="box">'+c.num+': …</div>';
     el.innerHTML=h; subs.appendChild(el);
   });
   D.done.forEach(function(c){var s=document.createElement('span');s.className='chip';s.textContent='✓ '+c.num+' '+c.title;done.appendChild(s)});
@@ -131,7 +137,10 @@ def build(state: dict, session: str, brief: str | None, nodes: list[str], focus:
             cards.append(item)
         else:
             done.append(item)
-    return {"brief": brief, "cards": cards, "done": done}, still_open
+    talking = None
+    if focus and focus in st["nodes"]:
+        talking = {"num": id_num(focus), "title": st["nodes"][focus]["title"]}
+    return {"brief": brief, "cards": cards, "done": done, "talking": talking}, still_open
 
 
 def render(data: dict) -> str:
@@ -139,7 +148,7 @@ def render(data: dict) -> str:
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         '<meta name="viewport" content="width=device-width, initial-scale=1"><title>Creek sub-chats</title>'
-        f"<style>{_STYLE}</style></head><body><div class=\"wrap\"><div class=\"stage\">"
+        f"<style>{_STYLE}</style></head><body><div class=\"wrap\"><div class=\"bar\" id=\"bar\"></div><div class=\"stage\">"
         '<div class="brief" id="brief"></div><svg class="lines" id="lines"></svg>'
         '<div><div class="subs" id="subs"></div><div class="done" id="done"></div></div></div></div>'
         f'<script type="application/json" id="d">{payload}</script><script>{_SCRIPT}</script></body></html>'

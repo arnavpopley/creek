@@ -89,7 +89,7 @@ Run Claude in an Orca terminal (or inside tmux) and send a numbered brief. Creek
 
 ## Sub-chats in the chat
 
-After a numbered brief, start a message with a point's number to talk to just that point: `3: teal`, `2: also add h for home`. Claude works on that point only, its reply is filed under it, and in Orca a sub-chat view (your brief branching into one card per point) opens at the top of the reply, with points settled since the last view dissolving into ✓. A settled point reopens when you address it again.
+After a numbered brief, start a message with a point's number to talk to just that point: `3: teal`. Plain messages then stay with point 3 until you type another number, `0:` for everyone, or point 3 settles. Claude works on that point only, its reply is filed under it, and in Orca a sub-chat view (your brief branching into one card per point) opens at the top of the reply, with points settled since the last view dissolving into ✓. A settled point reopens when you address it again.
 
 ## Sub-chats in an Orca sidebar (optional)
 

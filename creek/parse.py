@@ -18,13 +18,15 @@ MAX_FIELD = 600
 MARKER = re.compile(r"^\s*creek:\s*(on|node|resolve|ask)\b(.*)$", re.I)
 _ANY_CREEK = re.compile(r"^\s*creek:", re.I)
 # Markdown the model may wrap a marker in: list bullets, quotes, bold, backticks.
-_DECOR_LEAD = re.compile(r"^\s*(?:[-*+>]\s+|\d+[.)]\s+)?(\*\*|__|`)?")
+_DECOR_LEAD = re.compile(r"^\s*(?:<!--\s*)?(?:[-*+>]\s+|\d+[.)]\s+)?(\*\*|__|`)?")
 _FIELD = re.compile(r"^\s*([A-Za-z_]+)\s*:\s*(.*)$", re.S)
 
 
 def _undecorate(line: str) -> str:
     m = _DECOR_LEAD.match(line)
     s = line[m.end():].rstrip()
+    if s.endswith("-->"):
+        s = s[:-3].rstrip()
     wrap = m.group(1)
     # Only strip a closing ** or ` that pairs with an opening one.
     if wrap and s.endswith(wrap):

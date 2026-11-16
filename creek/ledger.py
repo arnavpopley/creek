@@ -615,6 +615,15 @@ def _sub_route(state, ev, s):
         routes.pop(s, None)
 
 
+def _sub_sticky(state, ev, s):
+    # Plain messages keep going to this point's sub-chat until the user switches or it settles.
+    sticky = state.setdefault("sticky", {})
+    if ev.get("node"):
+        sticky[s] = ev["node"]
+    else:
+        sticky.pop(s, None)
+
+
 def _pane_open(state, ev, s):
     state.setdefault("panes", {})[ev["node"]] = {"handle": ev.get("handle"), "branch": ev.get("branch"), "host": ev.get("host")}
 
@@ -653,6 +662,7 @@ _HANDLERS = {
     "sub.route": _sub_route,
     "view.shown": _view_shown,
     "pane.open": _pane_open,
+    "sub.sticky": _sub_sticky,
     "pulls.clear": _pulls_clear,
     "error": _error,
 }

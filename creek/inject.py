@@ -15,11 +15,11 @@ NOTES_TOKENS = 400
 GUARD_LINE = 220
 GUARD_MAX = 3
 
-PROTOCOL = """Creek is tracking this session. Work normally; end a reply with these one-line markers only when they apply:
+PROTOCOL = """Creek is tracking this session. Work normally; when these apply, end your reply with an HTML comment <!-- … --> holding the one-line markers:
 creek: on <node>   (starting a node: number or short title)
-creek: node <title>   (a new point arises that isn't in the brief)
+creek: node <title>   (a new point, not in the brief)
 creek: resolve <node> | decision: <what was settled, e.g. a fix or a choice> | rule: <constraint it creates for later work, optional> | affects: <files, identifiers> | tags: <key terms, optional> | supersedes: <record ids, optional>
-creek: ask <question>   (only the user can answer; ask once, then don't repeat it, Creek shows it to them)
+creek: ask <question>   (only the user can answer; ask once, Creek shows it to them)
 Records Creek shows you are settled decisions. To go against one, say so and list it under supersedes.
 Keep each marker under 300 characters."""
 

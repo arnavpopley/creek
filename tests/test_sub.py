@@ -180,3 +180,29 @@ class InChatRoutingTest(HookCase):
         ctx = self.context(self.hook("user-prompt-submit", prompt="2: more on b"))
         self.assertIn("sub-chat 2", ctx)
         self.assertNotIn("orca-visual", ctx)
+
+
+class StickyTest(HookCase):
+    def test_number_once_then_plain_messages_stay_until_settled_or_zero(self):
+        self.hook("user-prompt-submit", prompt="1. a thing\n2. b thing\n3. c thing")
+        self.hook("stop", last_assistant_message="**1 · a**\nok\n<!--\ncreek: resolve 1 | decision: a done\n-->")
+        self.assertEqual(self.state()["nodes"]["n1"]["status"], "resolved")  # markers inside a comment still count
+
+        self.assertIn("sub-chat 3", self.context(self.hook("user-prompt-submit", prompt="3: make it blue")))
+        self.hook("stop", last_assistant_message="Which blue?")
+        ctx = self.context(self.hook("user-prompt-submit", prompt="navy please"))
+        self.assertIn("sub-chat 3", ctx)  # still with point 3
+        st = self.state()
+        self.assertEqual([m["text"] for m in st["subchats"]["n3"]["thread"]], ["make it blue", "Which blue?", "navy please"])
+        self.hook("stop", last_assistant_message="Navy it is.\n<!-- creek: resolve 3 | decision: navy -->")
+        st = self.state()
+        self.assertEqual(st["subchats"]["n3"]["thread"][-1]["text"], "Navy it is.")  # comment stripped
+        self.assertNotIn(self.session, st.get("sticky", {}))  # settled: back to everyone
+        out = self.hook("user-prompt-submit", prompt="thanks")
+        self.assertIsNone(out)
+
+        self.hook("user-prompt-submit", prompt="2: start b")
+        self.assertEqual(self.state()["sticky"][self.session], "n2")
+        ctx = self.context(self.hook("user-prompt-submit", prompt="0: what's left overall?"))
+        self.assertIn("whole brief again", ctx)
+        self.assertNotIn(self.session, self.state().get("sticky", {}))

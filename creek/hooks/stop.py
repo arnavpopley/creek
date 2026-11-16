@@ -60,13 +60,18 @@ def _file_reply(tx, session: str, text: str) -> None:
     route = (tx.state.get("sub_route") or {}).get(session)
     if not route:
         return
-    body = "\n".join(line for line in (text or "").splitlines() if not line.strip().lower().startswith(("creek:", "::orca-visual"))).strip()
+    body = re.sub(r"<!--.*?-->", "", text or "", flags=re.S)
+    body = "\n".join(line for line in body.splitlines() if not line.strip().lower().startswith(("creek:", "::orca-visual"))).strip()
     if route == "brief":
         for nid, section in _sections(tx.state, body):
             tx.emit({"type": "sub.msg", "node": nid, "who": "claude", "text": section[:1500]})
     elif route in tx.state["nodes"] and body:
         tx.emit({"type": "sub.msg", "node": route, "who": "claude", "text": body[:1500]})
     tx.emit({"type": "sub.route", "node": None})
+    # A point that settled lets go of the conversation: plain messages go to everyone again.
+    sticky = (tx.state.get("sticky") or {}).get(session)
+    if sticky and tx.state["nodes"].get(sticky, {}).get("status") == "resolved":
+        tx.emit({"type": "sub.sticky", "node": None})
 
 
 def _sections(state: dict, body: str) -> list[tuple[str, str]]:
