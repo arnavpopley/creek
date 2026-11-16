@@ -12,6 +12,7 @@ sub-chat: each send is the turn they asked for, nothing extra.
 
 from __future__ import annotations
 
+import getpass
 import json
 import os
 import shutil
@@ -141,6 +142,9 @@ def send(cdir, node_text: str, text: str, permission_mode: str | None = None) ->
         argv += ["--permission-mode", permission_mode]
     argv.append(prompt)
     env = {**os.environ, "CREEK_BRANCH": bid, "CREEK_NODE": nid}
+    # claude finds its keychain login by USER; panels launched outside a login shell lack it.
+    env.setdefault("USER", getpass.getuser())
+    env.setdefault("LOGNAME", env["USER"])
     reply, err = "", None
     try:
         proc = subprocess.run(argv, cwd=str(cdir.parent), env=env, capture_output=True, text=True, timeout=TIMEOUT, stdin=subprocess.DEVNULL)

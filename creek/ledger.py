@@ -606,6 +606,19 @@ def _sub_busy(state, ev, s):
     sc["busy"] = bool(ev.get("busy"))
 
 
+def _sub_route(state, ev, s):
+    # The sub-chat this session's current turn was addressed to ("3: teal"), until Stop files the reply.
+    routes = state.setdefault("sub_route", {})
+    if ev.get("node"):
+        routes[s] = ev["node"]
+    else:
+        routes.pop(s, None)
+
+
+def _view_shown(state, ev, s):
+    state.setdefault("view_open", {})[s] = list(ev.get("open") or [])
+
+
 def _error(state, ev, s):
     state["errors"] += 1
 
@@ -633,6 +646,8 @@ _HANDLERS = {
     "pull": _pull,
     "sub.msg": _sub_msg,
     "sub.busy": _sub_busy,
+    "sub.route": _sub_route,
+    "view.shown": _view_shown,
     "pulls.clear": _pulls_clear,
     "error": _error,
 }
