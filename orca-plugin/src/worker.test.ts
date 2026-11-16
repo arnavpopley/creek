@@ -9,11 +9,12 @@ test('lists the focused workspace sub-chats through creek', async () => {
   const host = mockHost({
     results: {
       'workspace.readContext': { branch: 'main', displayName: 'demo', terminals: [] },
-      'workspace.list': { workspaces: [{ id: 'w1', kind: 'folder', name: 'demo', path: ROOT, branch: 'main', hostId: null }], truncated: false }
+      'workspace.list': { workspaces: [{ id: 'w0', kind: 'folder', name: 'demo', path: '/nonexistent', branch: 'main', hostId: null }, { id: 'w1', kind: 'folder', name: 'demo', path: ROOT, branch: 'refs/heads/main', hostId: null }], truncated: false }
     }
   })
   const worker = await mountWorker(main, { host })
-  const res = (await worker.request('subs.get')) as { data: { subs: unknown[]; done: { node: string }[] } | null; error?: string }
+  const res = (await worker.request('subs.get', {})) as { data: { subs: unknown[]; done: { node: string }[] } | null; projects: { path: string }[]; error?: string }
+  assert.deepEqual(res.projects.map((p) => p.path), [ROOT])
   assert.equal(res.error, undefined)
   assert.ok(res.data)
   assert.deepEqual(res.data!.done.map((s) => s.node), ['n1', 'n2', 'n3'])
@@ -22,9 +23,9 @@ test('lists the focused workspace sub-chats through creek', async () => {
 })
 
 test('no focused workspace', async () => {
-  const host = mockHost({ results: { 'workspace.readContext': null } })
+  const host = mockHost({ results: { 'workspace.readContext': null, 'workspace.list': { workspaces: [], truncated: false } } })
   const worker = await mountWorker(main, { host })
-  const res = (await worker.request('subs.get')) as { data: unknown; error?: string }
+  const res = (await worker.request('subs.get', {})) as { data: unknown; error?: string }
   assert.equal(res.data, null)
   assert.ok(res.error)
   await worker.deactivate()

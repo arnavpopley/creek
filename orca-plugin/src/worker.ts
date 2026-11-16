@@ -3,7 +3,7 @@
 // the project's .creek/ ledger; this worker only relays.
 import type { OrcaWorkerApi } from 'orca/worker'
 import { execFile, spawn } from 'node:child_process'
-import { existsSync, watch, type FSWatcher } from 'node:fs'
+import { existsSync, readFileSync, statSync, watch, type FSWatcher } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import './protocol'
@@ -24,15 +24,41 @@ function childEnv(): NodeJS.ProcessEnv {
   return { ...process.env, PATH: [...extra, process.env.PATH ?? ''].join(':') }
 }
 
-export async function focusedRoot(orca: OrcaWorkerApi): Promise<string | null> {
+type Place = { name: string; project: string | null; path: string; mtime: number; briefed: boolean }
+
+const norm = (b: string | null | undefined) => (b ?? '').replace(/^refs\/heads\//, '')
+
+/** A workspace's Creek ledger, if it has one: when it last changed and whether it holds a brief. */
+function ledgerInfo(path: string): { mtime: number; briefed: boolean } | null {
+  const file = join(path, '.creek', 'events.jsonl')
+  try {
+    const st = statSync(file)
+    // Briefs are rare and small; the ledger is append-only text.
+    const briefed = st.size > 0 && readFileSync(file, 'utf8').includes('"origin":"brief"')
+    return { mtime: st.mtimeMs, briefed }
+  } catch {
+    return null
+  }
+}
+
+/** Projects with a Creek ledger, the focused workspace's matches first, then the most recently active. */
+export async function places(orca: OrcaWorkerApi): Promise<{ list: Place[]; focused: string | null }> {
   const ctx = await orca.host.call('workspace.readContext', {})
-  if (!ctx) return null
   const { workspaces } = await orca.host.call('workspace.list', {})
-  const match =
-    workspaces.find((w) => w.name === ctx.displayName && (w.branch ?? '') === (ctx.branch ?? '')) ??
-    workspaces.find((w) => w.name === ctx.displayName) ??
-    workspaces.find((w) => w.branch && w.branch === ctx.branch)
-  return match?.path ?? null
+  const list: Place[] = []
+  for (const w of workspaces) {
+    const info = w.path ? ledgerInfo(w.path) : null
+    if (info) list.push({ name: w.name, project: w.project ?? null, path: w.path, ...info })
+  }
+  list.sort((a, b) => Number(b.briefed) - Number(a.briefed) || b.mtime - a.mtime)
+  let focused: string | null = null
+  if (ctx) {
+    // Orca gives only the focused workspace's name and branch; many are called "main".
+    const same = list.filter((p) => p.name === ctx.displayName && norm(workspaces.find((w) => w.path === p.path)?.branch) === norm(ctx.branch))
+    // Only trust the focus when it points at a project with a brief; names alone are ambiguous.
+    focused = same.find((p) => p.briefed)?.path ?? null
+  }
+  return { list, focused }
 }
 
 function runList(root: string): Promise<Subs> {
@@ -82,20 +108,22 @@ export default function activate(orca: OrcaWorkerApi): void {
     }
   }
 
-  orca.panels.handle('subs.get', async () => {
-    const root = await focusedRoot(orca)
-    if (!root) return { data: null, error: 'Open a workspace to see its sub-chats.' }
+  orca.panels.handle('subs.get', async (input) => {
+    const { list, focused } = await places(orca)
+    const wanted = input?.root && list.some((p) => p.path === input.root) ? input.root : null
+    const root = wanted ?? focused ?? list.find((p) => p.briefed)?.path ?? null
+    const projects = list.filter((p) => p.briefed).map((p) => ({ path: p.path, label: p.project ? `${p.project} · ${p.name}` : p.name }))
+    if (!root) return { data: null, projects, error: 'Send a numbered list in a chat first; Creek makes its sub-chats from it.' }
     watchLedger(root)
     try {
-      return { data: await runList(root) }
+      return { data: await runList(root), projects }
     } catch (e) {
-      return { data: null, error: `Creek isn't answering here: ${(e as Error).message}` }
+      return { data: null, projects, error: `Creek isn't answering here: ${(e as Error).message}` }
     }
   })
 
-  orca.panels.handle('subs.send', async ({ node, text }) => {
-    const root = await focusedRoot(orca)
-    if (!root) return { started: false, error: 'No workspace is focused.' }
+  orca.panels.handle('subs.send', async ({ node, text, root }) => {
+    if (!root || !existsSync(join(root, '.creek'))) return { started: false, error: 'No Creek project is selected.' }
     if (!text.trim()) return { started: false, error: 'Type a message first.' }
     const child = spawn(creekBin(), ['sub', 'send', node, text, '--root', root], {
       env: childEnv(),
