@@ -19,7 +19,7 @@ def run(payload: dict) -> dict | None:
     parts: list[str] = []
     with ledger.transaction(cdir, session) as tx:
         st = tx.state
-        tx.emit({"type": "turn", "preview": _preview(prompt)})
+        tx.emit({"type": "turn", "preview": _preview(prompt), "mode": payload.get("permission_mode")})
         if titles:
             created = []
             brief_id = f"p{st['turn'].get(session, 0) + 1}-{st['seq']}"
@@ -65,8 +65,6 @@ def _map(cdir, session: str) -> dict:
 
 
 def _preview(prompt: str) -> str:
-    """First non-empty line of a prompt, for the graph. Stays in the local ledger."""
-    for line in prompt.splitlines():
-        if line.strip():
-            return line.strip()[:80]
-    return ""
+    """The start of a prompt (up to 4 lines, 240 chars), for the graph and sub-chats. Stays in the local ledger."""
+    lines = [line.rstrip() for line in prompt.strip().splitlines() if line.strip()][:4]
+    return "\n".join(lines)[:240]

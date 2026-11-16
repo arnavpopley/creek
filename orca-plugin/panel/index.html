@@ -1,0 +1,242 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  :root { --ck-1: #2563eb; --ck-2: #16a34a; --ck-3: #d97706; --ck-4: #9333ea; --ck-5: #db2777; --ck-ok: #16a34a; --ck-wait: #d97706; }
+  html.dark { --ck-1: #60a5fa; --ck-2: #4ade80; --ck-3: #fbbf24; --ck-4: #c084fc; --ck-5: #f472b6; --ck-ok: #4ade80; --ck-wait: #fbbf24; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 12px 12px 20px; font: 13px/1.45 system-ui, -apple-system, sans-serif;
+         color: var(--orca-foreground); background: var(--orca-background); }
+  .top { display: flex; align-items: baseline; gap: 6px; margin-bottom: 10px; }
+  .top h1 { font-size: 14px; margin: 0; font-weight: 650; }
+  .top .proj { color: var(--orca-muted-foreground); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .top button { margin-left: auto; }
+  button.icon { border: 0; background: none; color: var(--orca-muted-foreground); cursor: pointer; font-size: 14px; padding: 2px 4px; border-radius: 6px; }
+  button.icon:hover { background: var(--orca-accent); color: var(--orca-accent-foreground); }
+
+  .brief { background: var(--orca-primary); color: var(--orca-primary-foreground); border-radius: 12px 12px 12px 4px;
+           padding: 8px 11px; font-size: 12.5px; white-space: pre-wrap; overflow-wrap: anywhere; }
+  .brief .who { font-size: 10.5px; opacity: .7; margin-bottom: 2px; }
+
+  .tree { position: relative; margin-left: 10px; padding-top: 4px; }
+  .tree::before { content: ""; position: absolute; left: 0; top: 0; bottom: var(--trunk-end, 24px); width: 2px; background: var(--orca-border); }
+  .sub { position: relative; margin: 10px 0 0 22px; border: 1px solid var(--orca-border); border-left: 3px solid var(--c);
+         border-radius: var(--orca-radius, 10px); background: var(--orca-card); color: var(--orca-card-foreground);
+         transition: opacity .6s ease, transform .6s ease, max-height .7s ease .25s, margin .7s ease .25s, padding .7s ease .25s;
+         max-height: 2000px; }
+  .sub::before { content: ""; position: absolute; left: -24px; top: -11px; width: 20px; height: 28px;
+                 border-left: 2px solid var(--c); border-bottom: 2px solid var(--c); border-bottom-left-radius: 12px; }
+  .sub.dissolve { opacity: 0; transform: translateX(-16px); max-height: 0; margin-top: 0; overflow: hidden; }
+  .sub.dissolve::before { opacity: 0; }
+  .head { display: flex; align-items: center; gap: 7px; padding: 8px 10px 4px; }
+  .num { flex: none; display: inline-grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: var(--c); color: #fff; font-size: 10.5px; font-weight: 700; }
+  .title { font-weight: 600; font-size: 12.5px; overflow-wrap: anywhere; }
+  .state { margin-left: auto; font-size: 11px; color: var(--orca-muted-foreground); white-space: nowrap; }
+  .state.wait { color: var(--ck-wait); } .state.ok { color: var(--ck-ok); }
+
+  .thread { padding: 2px 10px; display: grid; gap: 5px; }
+  .latest { font-size: 12px; color: var(--orca-muted-foreground); padding: 0 10px 4px 36px; }
+  .msg { font-size: 12.5px; padding: 6px 9px; border-radius: 10px; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 260px; overflow: auto; }
+  .msg.you { justify-self: end; max-width: 90%; background: color-mix(in srgb, var(--c) 16%, transparent); border-radius: 10px 10px 3px 10px; }
+  .msg.claude { background: var(--orca-background); border: 1px solid var(--orca-border); border-radius: 10px 10px 10px 3px; }
+  .more { font-size: 11.5px; color: var(--orca-muted-foreground); background: none; border: 0; cursor: pointer; padding: 0; justify-self: start; }
+  .ask { margin: 4px 10px 0; padding: 6px 9px; border-radius: 8px; font-size: 12.5px;
+         background: color-mix(in srgb, var(--ck-wait) 13%, transparent); border: 1px solid color-mix(in srgb, var(--ck-wait) 40%, transparent); }
+  .ask b { color: var(--ck-wait); font-weight: 600; }
+  .typing { display: inline-flex; gap: 3px; padding: 8px 10px; }
+  .typing i { width: 5px; height: 5px; border-radius: 50%; background: var(--orca-muted-foreground); animation: bob 1s infinite ease-in-out; }
+  .typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+  @keyframes bob { 0%, 80%, 100% { opacity: .3; transform: none; } 40% { opacity: 1; transform: translateY(-3px); } }
+
+  .compose { display: flex; gap: 6px; align-items: flex-end; padding: 6px 8px 8px; }
+  textarea { flex: 1; resize: none; min-height: 32px; max-height: 140px; padding: 7px 9px; border-radius: 9px; font: inherit; font-size: 12.5px;
+             border: 1px solid var(--orca-input); background: var(--orca-background); color: var(--orca-foreground); }
+  textarea:focus { outline: 2px solid var(--orca-ring); outline-offset: -1px; border-color: transparent; }
+  textarea:disabled { opacity: .6; }
+  .send { flex: none; height: 32px; width: 32px; border-radius: 9px; border: 0; cursor: pointer; font-size: 14px;
+          background: var(--orca-primary); color: var(--orca-primary-foreground); }
+  .send:disabled { opacity: .35; cursor: default; }
+  .err { color: var(--orca-destructive); font-size: 11.5px; padding: 0 10px 6px; }
+
+  .done { margin: 14px 0 0 0; display: flex; flex-wrap: wrap; gap: 5px; }
+  .chip { font-size: 11.5px; padding: 2px 9px; border-radius: 999px; background: color-mix(in srgb, var(--ck-ok) 14%, transparent); color: var(--ck-ok);
+          animation: pop .5s ease-out; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: default; }
+  @keyframes pop { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+  .empty { color: var(--orca-muted-foreground); padding: 10px 2px; font-size: 12.5px; }
+  .hint { color: var(--orca-muted-foreground); font-size: 11px; margin-top: 12px; }
+</style>
+</head>
+<body>
+  <div class="top"><h1>Creek</h1><span class="proj" id="proj"></span><button class="icon" id="refresh" title="Refresh">⟳</button></div>
+  <div id="root"><div class="empty">Loading…</div></div>
+<script>
+(function () {
+  'use strict'
+  var root = document.getElementById('root')
+  var state = { data: null, error: null }
+  var shown = {}          // node -> element, so drafts and focus survive refreshes
+  var drafts = {}         // node -> text being typed
+  var expanded = {}       // node -> show the whole thread
+  var sendErrors = {}     // node -> last send error
+  var pending = {}        // node -> sent, waiting for the worker
+  var prevOpen = null     // nodes open on the last render, to dissolve the ones that settled
+
+  function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c] }) }
+  function color(num) { return 'var(--ck-' + (((num - 1) % 5) + 1) + ')' }
+
+  async function load() {
+    try {
+      var res = await orca.plugin.request('subs.get', {})
+      state.data = res.data; state.error = res.error || null
+    } catch (e) {
+      state.data = null; state.error = (e && e.message) || String(e)
+    }
+    render()
+  }
+
+  async function send(node) {
+    var text = (drafts[node] || '').trim()
+    if (!text) return
+    pending[node] = true; sendErrors[node] = null
+    // Show the message straight away; the ledger confirms it on the next refresh.
+    var sub = (state.data.subs.concat(state.data.done)).find(function (s) { return s.node === node })
+    if (sub) { sub.thread = sub.thread.concat([{ who: 'you', text: text }]); sub.busy = true }
+    drafts[node] = ''
+    render()
+    try {
+      var res = await orca.plugin.request('subs.send', { node: node, text: text })
+      if (!res.started) { sendErrors[node] = res.error || 'Could not send.'; pending[node] = false; drafts[node] = text; load() }
+    } catch (e) {
+      sendErrors[node] = (e && e.message) || String(e); pending[node] = false; drafts[node] = text; load()
+    }
+  }
+
+  function card(s) {
+    var el = shown[s.node]
+    var fresh = !el
+    if (fresh) {
+      el = document.createElement('div')
+      el.className = 'sub'
+      el.dataset.node = s.node
+      el.innerHTML = '<div class="head"></div><div class="body"></div><div class="compose"><textarea rows="1"></textarea><button class="send" title="Send (Enter)">↑</button></div><div class="err"></div>'
+      var ta = el.querySelector('textarea'), btn = el.querySelector('.send')
+      ta.addEventListener('input', function () {
+        drafts[s.node] = ta.value
+        ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'
+        btn.disabled = !ta.value.trim() || ta.disabled
+      })
+      ta.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); if (!btn.disabled) send(s.node) }
+      })
+      btn.addEventListener('click', function () { send(s.node) })
+      shown[s.node] = el
+    }
+    el.style.setProperty('--c', color(s.num))
+    var busy = s.busy || pending[s.node]
+    var label = busy ? 'working…' : s.waiting ? 'needs you' : s.status === 'tabled' ? 'parked' : s.thread.length ? 'open' : ''
+    var cls = busy ? '' : s.waiting ? 'wait' : ''
+    el.querySelector('.head').innerHTML = '<span class="num">' + s.num + '</span><span class="title">' + esc(s.title) +
+      '</span><span class="state ' + cls + '">' + label + '</span>'
+    var body = ''
+    var thread = s.thread || []
+    if (!thread.length && s.latest) body += '<div class="latest">Latest: ' + esc(s.latest) + '</div>'
+    if (thread.length) {
+      var list = expanded[s.node] ? thread : thread.slice(-4)
+      body += '<div class="thread">'
+      if (list.length < thread.length) body += '<button class="more" data-more="1">Show ' + (thread.length - list.length) + ' earlier</button>'
+      list.forEach(function (m) { body += '<div class="msg ' + (m.who === 'you' ? 'you' : 'claude') + '">' + esc(m.text) + '</div>' })
+      if (busy) body += '<div class="typing" aria-label="Claude is working"><i></i><i></i><i></i></div>'
+      body += '</div>'
+    } else if (busy) {
+      body += '<div class="thread"><div class="typing"><i></i><i></i><i></i></div></div>'
+    }
+    if (s.waiting && !busy) body += '<div class="ask"><b>Claude asks:</b> ' + esc(s.waiting) + '</div>'
+    var b = el.querySelector('.body')
+    b.innerHTML = body
+    var more = b.querySelector('[data-more]')
+    if (more) more.addEventListener('click', function () { expanded[s.node] = true; render() })
+    var ta2 = el.querySelector('textarea'), btn2 = el.querySelector('.send')
+    if (document.activeElement !== ta2) ta2.value = drafts[s.node] || ''
+    ta2.disabled = !!busy
+    ta2.placeholder = busy ? 'Claude is working on point ' + s.num + '…' : s.waiting ? 'Answer point ' + s.num + '…' : 'Message point ' + s.num + '…'
+    btn2.disabled = busy || !ta2.value.trim()
+    el.querySelector('.err').textContent = sendErrors[s.node] || ''
+    return el
+  }
+
+  function render() {
+    var d = state.data
+    document.getElementById('proj').textContent = d ? '· ' + d.project : ''
+    if (!d) {
+      root.innerHTML = '<div class="empty">' + esc(state.error || 'Nothing here yet.') + '</div>'
+      shown = {}
+      return
+    }
+    // Replies have landed for anything the ledger no longer marks busy.
+    d.subs.concat(d.done).forEach(function (s) { if (!s.busy && pending[s.node] && s.thread.length && s.thread[s.thread.length - 1].who === 'claude') pending[s.node] = false })
+    var openNodes = d.subs.map(function (s) { return s.node })
+    var settledNow = prevOpen ? prevOpen.filter(function (n) { return openNodes.indexOf(n) < 0 && d.done.some(function (s) { return s.node === n }) }) : []
+
+    var tree = root.querySelector('.tree')
+    if (!tree) {
+      root.innerHTML = ''
+      var brief = document.createElement('div'); brief.className = 'brief'; brief.id = 'brief'; root.appendChild(brief)
+      tree = document.createElement('div'); tree.className = 'tree'; root.appendChild(tree)
+      var done = document.createElement('div'); done.className = 'done'; done.id = 'done'; root.appendChild(done)
+      var hint = document.createElement('div'); hint.className = 'hint'; root.appendChild(hint)
+    }
+    var briefEl = document.getElementById('brief')
+    briefEl.innerHTML = '<div class="who">You</div>' + esc(d.brief || 'Your brief')
+    briefEl.style.display = d.subs.length || d.done.length ? '' : 'none'
+
+    // Keep open cards in order; settled ones dissolve, then drop out.
+    var keep = {}
+    d.subs.forEach(function (s) { keep[s.node] = true; tree.appendChild(card(s)) })
+    Object.keys(shown).forEach(function (n) {
+      if (keep[n]) return
+      var el = shown[n]; delete shown[n]
+      if (settledNow.indexOf(n) >= 0) {
+        el.classList.add('dissolve')
+        setTimeout(function () { el.remove(); fit() }, 950)
+      } else el.remove()
+    })
+
+    var doneEl = document.getElementById('done')
+    doneEl.innerHTML = d.done.map(function (s) {
+      return '<span class="chip" title="' + esc(s.latest || '') + '">✓ ' + s.num + ' ' + esc(s.title) + '</span>'
+    }).join('')
+    root.querySelector('.hint').textContent = d.subs.length
+      ? 'Type in a point\'s box and only that point moves. When it is settled it merges back and the main chat gets one line.'
+      : d.done.length ? 'Every point is settled.' : ''
+    if (!d.subs.length && !d.done.length) {
+      tree.innerHTML = ''
+      root.querySelector('.hint').textContent = ''
+      doneEl.innerHTML = '<div class="empty">Send a numbered list in the chat. Each point gets its own sub-chat here, with its own box to type in.</div>'
+    }
+    prevOpen = openNodes
+    fit()
+  }
+
+  // End the trunk at the last card's connector.
+  function fit() {
+    var tree = root.querySelector('.tree'); if (!tree) return
+    var cards = tree.querySelectorAll('.sub:not(.dissolve)')
+    if (!cards.length) { tree.style.setProperty('--trunk-end', '100%'); return }
+    var last = cards[cards.length - 1]
+    tree.style.setProperty('--trunk-end', (tree.clientHeight - last.offsetTop - 17) + 'px')
+  }
+
+  orca.plugin.on('subs.changed', function (p) {
+    if (p && p.node && p.error) { sendErrors[p.node] = p.error; pending[p.node] = false }
+    if (p && p.node && !p.error) pending[p.node] = false
+    load()
+  })
+  try { orca.on('workspace.changed', function () { shown = {}; prevOpen = null; root.innerHTML = ''; load() }) } catch (_) {}
+  document.getElementById('refresh').addEventListener('click', load)
+  window.addEventListener('resize', fit)
+  load()
+})()
+</script>
+</body>
+</html>

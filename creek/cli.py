@@ -10,6 +10,10 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["hook"]:
         return run_hook(argv[1] if len(argv) > 1 else "")
+    if argv[:1] == ["sub"]:
+        from .sub import main as sub_main
+
+        return sub_main(argv[1:])
     if argv[:1] == ["statusline"]:
         from .statusline import main as statusline_main
 
@@ -219,6 +223,8 @@ def _main(argv: list[str]) -> int:
 
     sl = sub.add_parser("statusline", help="print the one-line status (Claude Code runs this)")
     sl.add_argument("--then", metavar="CMD", help="run an existing status line command first")
+
+    sub.add_parser("sub", help="sub-chats: `creek sub list` / `creek sub send <point> <text>`", add_help=False)
 
     h = sub.add_parser("hook", help="internal: called by Claude Code hooks")
     h.add_argument("event")

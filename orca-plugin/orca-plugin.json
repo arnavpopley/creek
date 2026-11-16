@@ -1,0 +1,26 @@
+{
+  "manifestVersion": 2,
+  "id": "creek",
+  "name": "Creek",
+  "version": "0.1.0",
+  "description": "Sub-chats for each point of your brief, in a sidebar next to the chat. Type into one and only that point moves; settled points dissolve away.",
+  "engines": {
+    "orca": ">=1.4.246"
+  },
+  "execution": "trusted-worker",
+  "pluginApi": 1,
+  "main": "src/worker.ts",
+  "contributes": {
+    "panels": [
+      {
+        "id": "creek",
+        "title": "Creek",
+        "icon": "branch",
+        "entry": "panel/index.html"
+      }
+    ]
+  },
+  "capabilities": [
+    { "kind": "workspace:read" }
+  ]
+}

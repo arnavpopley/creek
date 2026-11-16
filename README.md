@@ -83,6 +83,10 @@ creek install | doctor
 
 **Forks.** Run `creek fork 9` in a second terminal. It opens a branch on n9 and starts `claude --resume <your session> --fork-session`, tagged to that branch. Fix the point there and type `::merge` once Claude has resolved it. The main session gets one line on its next message: `b18 merged into n9: <decision>. Rule: <rule>`. Outside a terminal, `creek fork` prints the command instead of running it.
 
+## Sub-chats in Orca
+
+`orca-plugin/` is an Orca sidebar panel: each point of your brief gets its own sub-chat with its own box. Typing there runs that point in a fork of your main session; when it's settled the sub-chat dissolves and the main chat gets one line. The same thing from a terminal: `creek sub list`, `creek sub send 3 "teal"`.
+
 ## How it works
 
 ```

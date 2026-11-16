@@ -571,6 +571,8 @@ def _compact(state, ev, s):
 
 def _turn_ev(state, ev, s):
     state["turn"][s] = state["turn"].get(s, 0) + 1
+    if ev.get("mode") and s in state["sessions"]:
+        state["sessions"][s]["mode"] = ev["mode"]
 
 
 def _note_ev(state, ev, s):
@@ -591,6 +593,17 @@ def _pull(state, ev, s):
 def _pulls_clear(state, ev, s):
     pulls = state.setdefault("pending_pulls", {}).get(s, [])
     del pulls[: int(ev.get("count", len(pulls)))]
+
+
+def _sub_msg(state, ev, s):
+    sc = state.setdefault("subchats", {}).setdefault(ev["node"], {"thread": [], "busy": False})
+    sc["thread"].append({"who": ev.get("who", "you"), "text": str(ev.get("text", ""))[:4000], "ts": ev.get("ts")})
+    del sc["thread"][:-MAX_HISTORY]
+
+
+def _sub_busy(state, ev, s):
+    sc = state.setdefault("subchats", {}).setdefault(ev["node"], {"thread": [], "busy": False})
+    sc["busy"] = bool(ev.get("busy"))
 
 
 def _error(state, ev, s):
@@ -618,6 +631,8 @@ _HANDLERS = {
     "note": _note_ev,
     "notes.clear": _notes_clear,
     "pull": _pull,
+    "sub.msg": _sub_msg,
+    "sub.busy": _sub_busy,
     "pulls.clear": _pulls_clear,
     "error": _error,
 }
