@@ -160,7 +160,10 @@ def send(cdir, node_text: str, text: str, permission_mode: str | None = None) ->
     except OSError as exc:
         err = str(exc)
 
-    shown = "\n".join(line for line in reply.splitlines() if not line.strip().lower().startswith("creek:")).strip()
+    import re
+
+    shown = re.sub(r"<!--.*?-->", "", reply, flags=re.S)
+    shown = "\n".join(line for line in shown.splitlines() if not line.strip().lower().startswith("creek:")).strip()
     with ledger.transaction(cdir, "cli") as tx:
         st = tx.state
         tx.emit({"type": "sub.msg", "node": nid, "who": "claude", "text": shown if not err else f"(couldn't run: {err})"})

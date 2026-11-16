@@ -7,7 +7,7 @@ import re
 from .. import actions, commands, inject, ledger, parse
 from . import context_output, locate
 
-# "3: make it smaller" goes to point 3's sub-chat.
+# "3: make it smaller" goes to point 3's sub-chat; "0: …" back to everyone.
 _ROUTE = re.compile(r"^\s*@?(\d{1,3})\s*:\s*(\S.*)$", re.S)
 
 
@@ -27,8 +27,17 @@ def run(payload: dict) -> dict | None:
         st = tx.state
         tx.emit({"type": "turn", "preview": _preview(prompt), "mode": payload.get("permission_mode")})
         focus = None
-        if route and f"n{int(route.group(1))}" in st["nodes"]:
+        sticky = (st.get("sticky") or {}).get(session)
+        if titles and sticky:
+            tx.emit({"type": "sub.sticky", "node": None})
+        elif route and int(route.group(1)) == 0:
+            if sticky:
+                tx.emit({"type": "sub.sticky", "node": None})
+            parts.append("Creek: this message is for the whole brief again, not one point.")
+        elif route and f"n{int(route.group(1))}" in st["nodes"]:
             focus = _route_to(tx, f"n{int(route.group(1))}", route.group(2).strip(), parts)
+        elif not route and sticky in st["nodes"] and st["nodes"][sticky]["status"] in ("open", "tabled"):
+            focus = _route_to(tx, sticky, prompt.strip(), parts)
         created = []
         if titles:
             brief_id = f"p{st['turn'].get(session, 0) + 1}-{st['seq']}"
@@ -112,6 +121,8 @@ def _route_to(tx, nid: str, text: str, parts: list[str]) -> str:
         tx.emit({"type": "question.answer", "question": qid, "answer": text[:300]})
     tx.emit({"type": "sub.msg", "node": nid, "who": "you", "text": text})
     tx.emit({"type": "sub.route", "node": nid})
+    if (st.get("sticky") or {}).get(tx.session) != nid:
+        tx.emit({"type": "sub.sticky", "node": nid})
     num = nid[1:]
     parts.append(
         f"Creek: this message is for sub-chat {num} ({st['nodes'][nid]['title'][:80]}). Work only on point {num} and "
