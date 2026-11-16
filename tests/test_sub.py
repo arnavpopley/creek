@@ -106,3 +106,15 @@ class SubChatTest(HookCase):
         bad = subprocess.run([sys.executable, "-m", "creek", "sub", "send", "9", "x", "--root", str(self.tmp)], capture_output=True, text=True)
         self.assertEqual(bad.returncode, 1)
         self.assertIn("no point 9", bad.stdout)
+
+
+class QuestionFilingTest(HookCase):
+    def test_question_without_focus_files_under_the_open_point(self):
+        self.hook("user-prompt-submit", prompt="1. Sticky header\n2. Shortcuts w and t\n3. Pick an accent colour for links, ask me")
+        self.hook("stop", last_assistant_message=(
+            "creek: resolve 1 | decision: sticky\ncreek: resolve 2 | decision: shortcuts\n"
+            "creek: ask What accent colour should links use? A hex value or a colour name is fine."
+        ))
+        st = ledger.load_state(self.cdir)
+        self.assertEqual(st["questions"]["q1"]["node"], "n3")
+        self.assertEqual(sub.describe(self.cdir)["subs"][0]["waiting"], "What accent colour should links use? A hex value or a colour name is fine.")

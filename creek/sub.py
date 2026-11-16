@@ -50,6 +50,15 @@ def _prompt_preview(cdir) -> str | None:
     return last_brief_turn
 
 
+def _open_questions(st: dict, nid: str) -> list[str]:
+    """Open questions on this point, including ones asked before any point was in focus."""
+    out = [k for k in st["nodes"][nid].get("questions", []) if st["questions"][k]["status"] == "open"]
+    for k, q in st["questions"].items():
+        if q["status"] == "open" and not q.get("node") and k not in out and actions.question_node(st, q["text"]) == nid:
+            out.append(k)
+    return out
+
+
 def describe(cdir) -> dict:
     st = ledger.load_state(cdir)
     subs, done = [], []
@@ -57,7 +66,7 @@ def describe(cdir) -> dict:
         n = st["nodes"][nid]
         sc = st.get("subchats", {}).get(nid, {"thread": [], "busy": False})
         live = [r for r in n["records"] if st["records"][r]["active"]]
-        q = next((st["questions"][k] for k in n.get("questions", []) if st["questions"][k]["status"] == "open"), None)
+        q = next((st["questions"][k] for k in _open_questions(st, nid)), None)
         item = {
             "node": nid,
             "num": id_num(nid),
@@ -111,10 +120,8 @@ def send(cdir, node_text: str, text: str, permission_mode: str | None = None) ->
         bid, session = _sub_branch(tx, nid, main)
         # A reply to a question waiting on this point answers it. Claude records what it then
         # decides; the point only settles when Claude's own turn resolves it.
-        for qid in st["nodes"][nid].get("questions", []):
-            if st["questions"][qid]["status"] == "open":
-                tx.emit({"type": "question.answer", "question": qid, "answer": text[:300]})
-                break
+        for qid in _open_questions(st, nid)[:1]:
+            tx.emit({"type": "question.answer", "question": qid, "answer": text[:300]})
         before = len(st["branches"][bid]["records"])
         tx.emit({"type": "sub.msg", "node": nid, "who": "you", "text": text})
         tx.emit({"type": "sub.busy", "node": nid, "busy": True})
