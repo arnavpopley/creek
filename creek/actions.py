@@ -32,7 +32,7 @@ def _title_words(text: str) -> set[str]:
     return {w[:-1] if len(w) > 3 and w.endswith("s") else w for w in words if len(w) >= 3 and w not in terms.STOP}
 
 
-def match_node(state: dict, text: str | None, threshold: float = 0.6) -> str | None:
+def match_node(state: dict, text: str | None, threshold: float = 0.6, only_open: bool = False) -> str | None:
     """An exact id or title, else the node whose title contains most of `text`'s words.
 
     The model often names a node by a short paraphrase ("h shortcut" for
@@ -47,12 +47,17 @@ def match_node(state: dict, text: str | None, threshold: float = 0.6) -> str | N
         return None
     best, best_key = None, (0.0, 0)
     for k, n in state["nodes"].items():
-        if n["status"] == "abandoned":
+        if n["status"] == "abandoned" or (only_open and n["status"] not in ("open", "tabled")):
             continue
         hit = len(want & _title_words(n["title"])) / len(want)
         if hit >= threshold and (hit, id_num(k)) > best_key:
             best, best_key = k, (hit, id_num(k))
     return best
+
+
+def question_node(state: dict, text: str) -> str | None:
+    """The open point a question is about: questions are worded differently from titles, so a third of the words will do."""
+    return match_node(state, text, threshold=0.34, only_open=True)
 
 
 def focus_of(state: dict, session: str) -> tuple[str | None, str | None]:
@@ -142,8 +147,8 @@ def resolve(tx, marker: dict, source_msg: dict | None = None, env_branch: str | 
 def ask(tx, text: str) -> str:
     fnode, _ = focus_of(tx.state, tx.session)
     if fnode is None:
-        # File the question under the point it is about, so answering it settles that point.
-        fnode = match_node(tx.state, text)
+        # File the question under the open point it is about, so answering it settles that point.
+        fnode = question_node(tx.state, text)
     return tx.emit({"type": "question.ask", "text": text, "norm": terms.normalize_question(text), "node": fnode})["question"]
 
 
