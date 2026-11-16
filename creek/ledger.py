@@ -615,6 +615,10 @@ def _sub_route(state, ev, s):
         routes.pop(s, None)
 
 
+def _pane_open(state, ev, s):
+    state.setdefault("panes", {})[ev["node"]] = {"handle": ev.get("handle"), "branch": ev.get("branch"), "host": ev.get("host")}
+
+
 def _view_shown(state, ev, s):
     state.setdefault("view_open", {})[s] = list(ev.get("open") or [])
 
@@ -648,6 +652,7 @@ _HANDLERS = {
     "sub.busy": _sub_busy,
     "sub.route": _sub_route,
     "view.shown": _view_shown,
+    "pane.open": _pane_open,
     "pulls.clear": _pulls_clear,
     "error": _error,
 }

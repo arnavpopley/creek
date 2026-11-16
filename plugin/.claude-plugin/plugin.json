@@ -1,6 +1,6 @@
 {
   "name": "creek",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Branch-and-merge decision tracking for long Claude Code sessions",
   "author": {
     "name": "Arnav Popley"

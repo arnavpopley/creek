@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 
 from .. import actions, ledger, parse, transcript
@@ -24,10 +25,31 @@ def run(payload: dict) -> None:
         source["turn"] = tx.state["turn"].get(session, 0)
         for err in errors:
             tx.emit({"type": "error", "where": "marker", "msg": err})
+        before = len(tx.state["branches"].get(bid, {}).get("records", [])) if bid else 0
         actions.apply_markers(tx, markers, source_msg=source, env_branch=bid)
         actions.flag_unrecorded(tx)
         _file_reply(tx, session, text)
+        if bid and os.environ.get("CREEK_PANE"):
+            _settle_pane(tx, bid, before)
     return None
+
+
+def _settle_pane(tx, bid: str, before: int) -> None:
+    """In a sub-chat pane: once this turn settles the point, merge it and let the pane go."""
+    from .. import panes
+
+    br = tx.state["branches"].get(bid) or {}
+    if br.get("status") != "open" or len(br.get("records", [])) <= before:
+        return
+    if tx.state["nodes"].get(br["node"], {}).get("status") != "resolved":
+        return
+    tx.emit({"type": "branch.merge", "branch": bid, "record": br["records"][-1]})
+    kind = os.environ.get("CREEK_PANE")
+    handle = os.environ.get("ORCA_TERMINAL_HANDLE") if kind == "orca" else os.environ.get("TMUX_PANE")
+    if handle:
+        title = tx.state["nodes"][br["node"]]["title"]
+        panes.set_title(kind, handle, f"✓ {panes.label(br['node'], title)} · closing")
+        panes.close_later(kind, handle)
 
 
 _SECTION = re.compile(r"^\s*(?:#{1,4}\s*|\*\*\s*)?(\d{1,2})\s*(?:[·.):\-–—])\s*", re.M)

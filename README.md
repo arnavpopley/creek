@@ -83,6 +83,10 @@ creek install | doctor
 
 **Forks.** Run `creek fork 9` in a second terminal. It opens a branch on n9 and starts `claude --resume <your session> --fork-session`, tagged to that branch. Fix the point there and type `::merge` once Claude has resolved it. The main session gets one line on its next message: `b18 merged into n9: <decision>. Rule: <rule>`. Outside a terminal, `creek fork` prints the command instead of running it.
 
+## Sub-chats as panes (Orca terminal or tmux)
+
+Run Claude in an Orca terminal (or inside tmux) and send a numbered brief. Creek splits the tab: your main Claude stays on the left, and each point gets its own titled pane on the right running a fork of your session, already working on that point. Click a pane and type to talk to just that point. When a pane settles its point, its title turns ✓, it closes a few seconds later, and the main chat gets one line about it. Set `CREEK_PANES=0` to turn this off.
+
 ## Sub-chats in the chat
 
 After a numbered brief, start a message with a point's number to talk to just that point: `3: teal`, `2: also add h for home`. Claude works on that point only, its reply is filed under it, and in Orca a sub-chat view (your brief branching into one card per point) opens at the top of the reply, with points settled since the last view dissolving into ✓. A settled point reopens when you address it again.

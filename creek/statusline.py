@@ -110,7 +110,13 @@ def main(argv: list[str]) -> int:
         if out:
             sys.stdout.write(out + "\n")
     try:
-        line = render(load(_root_from(payload)))
+        state = load(_root_from(payload))
+        node = os.environ.get("CREEK_NODE")
+        if node and state and node in state.get("nodes", {}):
+            n = state["nodes"][node]
+            line = f"creek · sub-chat {node[1:]} · {n['title'][:48]}" + (" · settled ✓" if n["status"] == "resolved" else "")
+        else:
+            line = render(state)
     except Exception:  # noqa: BLE001 - the status line must always print something
         line = "creek · ?"
     sys.stdout.write(line + "\n")
