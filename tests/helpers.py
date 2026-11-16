@@ -18,9 +18,9 @@ class ProjectCase(unittest.TestCase):
     def setUp(self):
         self.tmp = Path(tempfile.mkdtemp(prefix="creek-test-"))
         (self.tmp / ".git").mkdir()
-        self._old_env = {k: os.environ.get(k) for k in ("CREEK_ROOT", "CLAUDE_PROJECT_DIR", "CREEK_BRANCH", "CREEK_NODE")}
+        self._old_env = {k: os.environ.get(k) for k in ("CREEK_ROOT", "CLAUDE_PROJECT_DIR", "CREEK_BRANCH", "CREEK_NODE", "ORCA_CHAT_SCRATCH_DIR")}
         os.environ["CREEK_ROOT"] = str(self.tmp)
-        for k in ("CLAUDE_PROJECT_DIR", "CREEK_BRANCH", "CREEK_NODE"):
+        for k in ("CLAUDE_PROJECT_DIR", "CREEK_BRANCH", "CREEK_NODE", "ORCA_CHAT_SCRATCH_DIR"):
             os.environ.pop(k, None)
         self.cdir = paths.creek_dir(self.tmp)
 

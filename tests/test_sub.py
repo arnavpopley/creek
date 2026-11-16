@@ -118,3 +118,65 @@ class QuestionFilingTest(HookCase):
         st = ledger.load_state(self.cdir)
         self.assertEqual(st["questions"]["q1"]["node"], "n3")
         self.assertEqual(sub.describe(self.cdir)["subs"][0]["waiting"], "What accent colour should links use? A hex value or a colour name is fine.")
+
+
+class InChatRoutingTest(HookCase):
+    """'3: teal' in the main chat goes to point 3's sub-chat, with a view of the sub-chats in Orca."""
+
+    def setUp(self):
+        super().setUp()
+        self.scratch = self.tmp / "orca-scratch"
+        self.scratch.mkdir()
+        self.env = {"ORCA_CHAT_SCRATCH_DIR": str(self.scratch)}
+
+    def ctx(self, prompt):
+        return self.context(self.hook("user-prompt-submit", env=self.env, prompt=prompt))
+
+    def test_whole_flow(self):
+        ctx = self.ctx("Small changes:\n1. Sticky header\n2. Shortcuts w and t\n3. Pick a link colour, ask me")
+        self.assertIn('::orca-visual{file="creek-subchats-', ctx)
+        self.assertIn("**1 · title**", ctx)
+        # Claude answers point by point; each section lands in its sub-chat.
+        self.hook("stop", env=self.env, last_assistant_message=(
+            "::orca-visual{file=\"x.html\"}\n\n**1 · Sticky header**\nThe header is sticky now.\n\n"
+            "**2 · Shortcuts**\nw and t work.\n\n**3 · Link colour**\nWhich colour do you want?\n\n"
+            "creek: resolve 1 | decision: sticky header | affects: style.css\n"
+            "creek: resolve 2 | decision: w and t | affects: app.js\ncreek: on 3\ncreek: ask Which colour should links be?"
+        ))
+        st = self.state()
+        self.assertEqual(st["subchats"]["n1"]["thread"][0]["text"], "The header is sticky now.")
+        self.assertEqual(st["subchats"]["n3"]["thread"][0]["text"], "Which colour do you want?")
+
+        ctx = self.ctx("3: teal")
+        self.assertIn("this message is for sub-chat 3", ctx)
+        st = self.state()
+        self.assertEqual(st["questions"]["q1"]["status"], "answered")
+        self.assertEqual(st["sub_route"][self.session], "n3")
+        view = max(self.scratch.glob("creek-subchats-*.html"), key=lambda p: p.stat().st_mtime_ns).read_text()
+        data = json.loads(view.split('id="d">')[1].split("</script>")[0])
+        cards = {c["node"]: c for c in data["cards"]}
+        # Points 1 and 2 settled since the first view: they dissolve in this one.
+        self.assertTrue(cards["n1"]["settling"] and cards["n2"]["settling"])
+        self.assertEqual(cards["n3"]["state"], "replying below ↓")
+        self.assertEqual(cards["n3"]["thread"][-1], {"who": "you", "text": "teal", "ts": cards["n3"]["thread"][-1]["ts"]})
+
+        self.hook("stop", env=self.env, last_assistant_message="Links are teal now.\ncreek: resolve 3 | decision: teal links | affects: style.css")
+        st = self.state()
+        self.assertEqual(st["subchats"]["n3"]["thread"][-1]["text"], "Links are teal now.")
+        self.assertEqual(st["nodes"]["n3"]["status"], "resolved")
+        self.assertNotIn(self.session, st.get("sub_route", {}))
+
+        # A settled point reopens when addressed.
+        ctx = self.ctx("2: also h for home")
+        self.assertIn("sub-chat 2", ctx)
+        self.assertEqual(self.state()["nodes"]["n2"]["status"], "open")
+
+    def test_numbered_prompt_that_is_not_a_point(self):
+        out = self.hook("user-prompt-submit", env=self.env, prompt="42: what is this")
+        self.assertIsNone(out)
+
+    def test_outside_orca_routes_without_a_view(self):
+        self.hook("user-prompt-submit", prompt="1. a\n2. b\n3. c")
+        ctx = self.context(self.hook("user-prompt-submit", prompt="2: more on b"))
+        self.assertIn("sub-chat 2", ctx)
+        self.assertNotIn("orca-visual", ctx)
