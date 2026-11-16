@@ -10,6 +10,10 @@ def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if argv[:1] == ["hook"]:
         return run_hook(argv[1] if len(argv) > 1 else "")
+    if argv[:1] == ["panes"]:
+        from .panes import main as panes_main
+
+        return panes_main(argv[1:])
     if argv[:1] == ["sub"]:
         from .sub import main as sub_main
 

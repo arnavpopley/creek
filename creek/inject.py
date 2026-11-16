@@ -5,6 +5,8 @@ Token counts are estimated at 4 characters per token.
 
 from __future__ import annotations
 
+import os
+
 from .model import id_num
 
 CHARS_PER_TOKEN = 4
@@ -65,7 +67,10 @@ def render_state(state: dict, session: str | None = None, source: str = "startup
     if branch and branch in state["branches"]:
         br = state["branches"][branch]
         title = nodes.get(br["node"], {}).get("title", "")
-        header.append(clip(f"You are in branch {branch} on {br['node']} ({title}). Resolve here, then the user runs ::merge.", 300))
+        if os.environ.get("CREEK_PANE"):
+            header.append(clip(f"You are sub-chat {br['node'][1:]} ({title}) in your own pane. Resolve point {br['node'][1:]} here; the pane then closes itself.", 300))
+        else:
+            header.append(clip(f"You are in branch {branch} on {br['node']} ({title}). Resolve here, then the user runs ::merge.", 300))
     focus = state["focus"].get(session) or {} if session else {}
     if focus.get("node") in nodes and not branch:
         header.append(clip(f"Focus: {focus['node']} {nodes[focus['node']]['title']}", 120))

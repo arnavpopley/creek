@@ -146,3 +146,18 @@ class CompactTest(HookCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SiblingPointsTest(ProjectCase):
+    def test_points_of_one_brief_sharing_a_file_are_not_flagged(self):
+        from creek import actions
+
+        with ledger.transaction(self.cdir, "s") as tx:
+            for t in ("a", "b"):
+                tx.emit({"type": "node.create", "title": t, "origin": "brief", "brief_id": "p1"})
+            tx.emit({"type": "node.create", "title": "later", "origin": "model"})
+            actions.add_record(tx, "n1", "done command", affects=["todo.py"])
+            actions.add_record(tx, "n2", "tick marks", affects=["todo.py"])
+            self.assertEqual(tx.state["conflicts"], {})
+            actions.add_record(tx, "n3", "rewrite storage", affects=["todo.py"])
+            self.assertEqual(len(tx.state["conflicts"]), 2)  # a point from outside the brief still flags

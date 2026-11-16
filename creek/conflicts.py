@@ -44,6 +44,10 @@ def check(tx, rid: str) -> list[str]:
             continue
         if other["node"] == rec["node"]:
             continue
+        # Points of one brief often touch the same file (each pane adds its bit); that is expected, not a clash.
+        bid_a = st["nodes"].get(rec["node"], {}).get("brief_id")
+        if bid_a and bid_a == st["nodes"].get(other["node"], {}).get("brief_id"):
+            continue
         if frozenset((oid, rid)) in pairs:
             continue
         files = overlap(rec, other)

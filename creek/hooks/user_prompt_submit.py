@@ -41,11 +41,24 @@ def run(payload: dict) -> dict | None:
                 span = f"{created[0]}–{created[-1]}" if len(created) > 1 else created[0]
                 parts.append(f"Creek: created {span} from this brief, in order.")
                 tx.emit({"type": "sub.route", "node": "brief"})
+        from .. import panes
+
+        if created and panes.host():
+            # Each point gets its own pane and its own Claude; this chat stays the overview.
+            panes.launch_background(tx.cdir, session, created, _preview(prompt) if len(prompt) > 1200 else prompt.strip())
+            tx.emit({"type": "sub.route", "node": None})
+            parts[:] = [p for p in parts if not p.startswith("Creek: created")]
+            parts.append(
+                f"Creek: opened a pane for each point ({created[0]}–{created[-1]}); a separate Claude in each pane works on "
+                f"its point, and the user types to it there. Reply here in one short line acknowledging that. Don't work "
+                f"on the points in this chat."
+            )
+            created = []
         if created or focus:
             line = _show_view(tx, session, prompt if created else None, focus, fresh=bool(created))
             if line:
                 parts.append(f"Your reply must start with this exact line, before anything else (it draws the user's sub-chats):\n{line}")
-        if created:
+        if created and not any(p.startswith("Creek: opened a pane") for p in parts):
             parts.append(
                 ("After that line, answer" if parts[-1].startswith("Your reply must start") else "Answer")
                 + " point by point under headings like **1 · title**, so each answer lands in its point's sub-chat."
